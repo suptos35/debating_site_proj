@@ -13,15 +13,15 @@ return new class extends Migration
     {
         Schema::create('posts', function (Blueprint $table) {
             $table->id();
-            $table->string('title');
+            $table->string('title')->nullable();
             $table->text('excerpt')->nullable(); // short description (optional
             $table->text('content');
             $table->unsignedBigInteger('parent_id')->nullable();
             $table->unsignedBigInteger('user_id');
-            $table->unsignedBigInteger('catagory_id')->nullable();
+            // $table->unsignedBigInteger('catagory_id')->nullable();
             $table->foreign('parent_id')->references('id')->on('posts')->onDelete('cascade');
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
-            $table->foreign('catagory_id')->references('id')->on('catagories')->onDelete('cascade')->nullable();
+            // $table->foreign('catagory_id')->references('id')->on('catagories')->onDelete('cascade')->nullable();
             $table->string('type')->nullable(); // 'pro' or 'con'
             $table->unsignedInteger('like_count')->default(0); // Added
             $table->string('image_url')->nullable(); // Added

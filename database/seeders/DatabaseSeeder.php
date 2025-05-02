@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\User;
 use App\Models\Post;
+use App\Models\Category;
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Faker\Factory;
@@ -17,22 +18,29 @@ class DatabaseSeeder extends Seeder
     {
 
         $users = User::factory(15)->create();
-        Post::factory(10)->create([
-            'user_id' => $users->random()->id, // Assign random user
-        ])->each(function ($post) use ($users) { // Pass $users into the closure
+        $categories = Category::factory(10)->create();
+        Post::factory(10)->create()->each(function ($post) use ($users, $categories) {
+            $post->update(['user_id' => $users->random()->id]); // Assign random user
+
+            // Attach up to 3 random categories
+            $post->categories()->attach($categories->random(rand(1, 3))->pluck('id'));
+
             // Create child posts
             Post::factory(4)->create([
-                'user_id' => $users->random()->id, // Assign random user
-                'parent_id' => $post->id, // Link to parent
+                'parent_id' => $post->id,
+                'user_id' => $users->random()->id,
                 'excerpt' => null,
-            ])->each(function ($childPost) use ($users) { // Pass $users into the closure
+            ])->each(function ($childPost) use ($users, $categories) {
+                $childPost->categories()->attach($categories->random(rand(1, 3))->pluck('id'));
+
                 // Create grandchild posts
                 Post::factory(2)->create([
-                    'user_id' => $users->random()->id, // Assign random user
-                    'parent_id' => $childPost->id, // Link to child post
+                    'parent_id' => $childPost->id,
+                    'user_id' => $users->random()->id,
                     'excerpt' => null,
-
-                ]);
+                ])->each(function ($grandChildPost) use ($categories) {
+                    $grandChildPost->categories()->attach($categories->random(rand(1, 3))->pluck('id'));
+                });
             });
         });
 

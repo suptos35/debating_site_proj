@@ -9,6 +9,17 @@ class Post extends Model
 {
     use HasFactory;
 
+    protected $fillable = [
+        'title',
+        'excerpt',
+        'content',
+        'parent_id',
+        'user_id',
+        'type',
+        'like_count',
+        'image_url'
+    ];
+
     public function parent()
     {
         return $this->belongsTo(Post::class, 'parent_id');
@@ -34,8 +45,24 @@ class Post extends Model
     return $this->belongsTo(User::class);
 }
 
-public function catagory()
+public function categories()
 {
-    return $this->belongsTo(Catagory::class);
+    return $this->belongsToMany(Category::class, 'category_post');
 }
+public function likes()
+{
+    return $this->hasMany(Like::class);
+}
+
+public function likedByUsers()
+{
+    return $this->belongsToMany(User::class, 'likes', 'post_id', 'user_id');
+}
+
+// Check if a specific user has liked this post
+public function isLikedByUser($userId)
+{
+    return $this->likes()->where('user_id', $userId)->exists();
+}
+
 }
