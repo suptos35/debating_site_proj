@@ -26,25 +26,47 @@
             </a>
             <!-- User name and Like icon on the same line -->
             <div class="flex justify-between items-center mt-2 text-sm text-gray-600">
-                <!-- Username (Left aligned, smaller, moved right, underlined) -->
-                <span class="underline text-xs ml-2">{{$pro->user->name}}</span>
-                <!-- Reference icon/word -->
-<button type="button"
-    data-modal-target="reference-modal-{{ $pro->id }}"
-    data-modal-toggle="reference-modal-{{ $pro->id }}"
-    class="flex items-center text-blue-600 hover:underline text-xs ml-2">
-    <i class="fas fa-link mr-1"></i> References
-</button>
-<span class="ml-1 text-xs text-gray-400">({{ $pro->references->count() }})</span>
-                <!-- Like icon and count (Right aligned, slightly moved left) -->
                 <div class="flex items-center">
-                    <i
-                        class="fas fa-thumbs-up cursor-pointer like-button {{ Auth::check() && $pro->isLikedByUser(Auth::id()) ? 'text-green-500' : 'text-gray-400 hover:text-green-500' }}"
-                        data-post-id="{{$pro->id}}"
-                        data-type="pro"
-                        {{ !Auth::check() ? 'title="Login to like posts"' : '' }}>
-                    </i>
-                    <span class="text-xs ml-1 like-count">{{$pro->like_count}}</span>
+                    <!-- Username (Left aligned, smaller, moved right, underlined) -->
+                    <span class="underline text-xs ml-2">{{$pro->user->name}}</span>
+
+                    @auth
+                        @if(Auth::id() === $pro->user_id)
+                            <!-- Edit/Delete buttons for post owner -->
+                            <a href="{{ route('posts.edit', $pro) }}" class="text-blue-600 hover:text-blue-800 text-xs ml-2" title="Edit argument">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <form action="{{ route('posts.destroy', $pro) }}" method="POST" class="inline ml-1" onsubmit="return confirm('Are you sure you want to delete this argument?');">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="text-red-600 hover:text-red-800 text-xs" title="Delete argument">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        @endif
+                    @endauth
+                </div>
+
+                <div class="flex items-center">
+                    <!-- Reference icon/word -->
+                    <button type="button"
+                        data-modal-target="reference-modal-{{ $pro->id }}"
+                        data-modal-toggle="reference-modal-{{ $pro->id }}"
+                        class="flex items-center text-blue-600 hover:underline text-xs ml-2">
+                        <i class="fas fa-link mr-1"></i> References
+                    </button>
+                    <span class="ml-1 text-xs text-gray-400">({{ $pro->references->count() }})</span>
+
+                    <!-- Like icon and count (Right aligned, slightly moved left) -->
+                    <div class="flex items-center ml-2">
+                        <i
+                            class="fas fa-thumbs-up cursor-pointer like-button {{ Auth::check() && $pro->isLikedByUser(Auth::id()) ? 'text-green-500' : 'text-gray-400 hover:text-green-500' }}"
+                            data-post-id="{{$pro->id}}"
+                            data-type="pro"
+                            {{ !Auth::check() ? 'title="Login to like posts"' : '' }}>
+                        </i>
+                        <span class="text-xs ml-1 like-count">{{$pro->like_count}}</span>
+                    </div>
                 </div>
                 <!-- Reference Modal -->
 <div id="reference-modal-{{ $pro->id }}" tabindex="-1" aria-hidden="true"
@@ -61,10 +83,32 @@
             <div class="p-6 space-y-4">
                 @forelse($pro->references as $reference)
                     <div class="flex items-center justify-between border-b pb-2 mb-2">
-                        <div>
-                            <a href="{{ $reference->url }}" target="_blank" class="text-blue-600 underline">
-                                {{ $reference->description ?? $reference->url }}
-                            </a>
+                        <div class="flex-1">
+                            <div class="flex items-center mb-1">
+                                <a href="{{ $reference->url }}" target="_blank" class="text-blue-600 underline flex-1">
+                                    {{ $reference->description ?? $reference->url }}
+                                </a>
+                            </div>
+                            <!-- Reference status badges -->
+                            <div class="flex items-center space-x-2 mt-1">
+                                @if($reference->is_valid)
+                                    <span title="Valid URL" class="text-green-500 text-xs">✅ Valid</span>
+                                @else
+                                    <span title="URL not reachable" class="text-red-500 text-xs">❌ Invalid</span>
+                                @endif
+
+                                @if($reference->is_reputable)
+                                    <span title="Reputable Source" class="text-yellow-500 text-xs">⭐ Trusted</span>
+                                @else
+                                    <span title="Source not in trusted list" class="text-orange-500 text-xs">⚠️ Unverified</span>
+                                @endif
+
+                                @if($reference->is_relevant)
+                                    <span title="Relevant to claim ({{ number_format($reference->similarity_score * 100, 1) }}% match)" class="text-blue-500 text-xs">🔗 Relevant</span>
+                                @elseif($reference->similarity_score !== null)
+                                    <span title="Low relevance ({{ number_format($reference->similarity_score * 100, 1) }}% match)" class="text-gray-500 text-xs">🔗 Low relevance</span>
+                                @endif
+                            </div>
                         </div>
                         @auth
                             @if(Auth::id() === $pro->user_id)
@@ -121,25 +165,47 @@
             </a>
             <!-- User name and Like icon on the same line -->
             <div class="flex justify-between items-center mt-2 text-sm text-gray-600">
-                <!-- Username (Left aligned, smaller, moved right, underlined) -->
-                <span class="underline text-xs ml-2">{{$con->user->name}}</span>
-                <!-- Reference icon/word -->
-<button type="button"
-    data-modal-target="reference-modal-{{ $con->id }}"
-    data-modal-toggle="reference-modal-{{ $con->id }}"
-    class="flex items-center text-blue-600 hover:underline text-xs ml-2">
-    <i class="fas fa-link mr-1"></i> References
-</button>
-<span class="ml-1 text-xs text-gray-400">({{ $con->references->count() }})</span>
-                <!-- Like icon and count (Right aligned, slightly moved left) -->
                 <div class="flex items-center">
-                    <i
-                        class="fas fa-thumbs-up cursor-pointer like-button {{ Auth::check() && $con->isLikedByUser(Auth::id()) ? 'text-red-500' : 'text-gray-400 hover:text-red-500' }}"
-                        data-post-id="{{$con->id}}"
-                        data-type="con"
-                        {{ !Auth::check() ? 'title="Login to like posts"' : '' }}>
-                    </i>
-                    <span class="text-xs ml-1 like-count">{{$con->like_count}}</span>
+                    <!-- Username (Left aligned, smaller, moved right, underlined) -->
+                    <span class="underline text-xs ml-2">{{$con->user->name}}</span>
+
+                    @auth
+                        @if(Auth::id() === $con->user_id)
+                            <!-- Edit/Delete buttons for post owner -->
+                            <a href="{{ route('posts.edit', $con) }}" class="text-blue-600 hover:text-blue-800 text-xs ml-2" title="Edit argument">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <form action="{{ route('posts.destroy', $con) }}" method="POST" class="inline ml-1" onsubmit="return confirm('Are you sure you want to delete this argument?');">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="text-red-600 hover:text-red-800 text-xs" title="Delete argument">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        @endif
+                    @endauth
+                </div>
+
+                <div class="flex items-center">
+                    <!-- Reference icon/word -->
+                    <button type="button"
+                        data-modal-target="reference-modal-{{ $con->id }}"
+                        data-modal-toggle="reference-modal-{{ $con->id }}"
+                        class="flex items-center text-blue-600 hover:underline text-xs ml-2">
+                        <i class="fas fa-link mr-1"></i> References
+                    </button>
+                    <span class="ml-1 text-xs text-gray-400">({{ $con->references->count() }})</span>
+
+                    <!-- Like icon and count (Right aligned, slightly moved left) -->
+                    <div class="flex items-center ml-2">
+                        <i
+                            class="fas fa-thumbs-up cursor-pointer like-button {{ Auth::check() && $con->isLikedByUser(Auth::id()) ? 'text-red-500' : 'text-gray-400 hover:text-red-500' }}"
+                            data-post-id="{{$con->id}}"
+                            data-type="con"
+                            {{ !Auth::check() ? 'title="Login to like posts"' : '' }}>
+                        </i>
+                        <span class="text-xs ml-1 like-count">{{$con->like_count}}</span>
+                    </div>
                 </div>
                 <!-- Reference Modal -->
 <div id="reference-modal-{{ $con->id }}" tabindex="-1" aria-hidden="true"
@@ -156,10 +222,32 @@
             <div class="p-6 space-y-4">
                 @forelse($con->references as $reference)
                     <div class="flex items-center justify-between border-b pb-2 mb-2">
-                        <div>
-                            <a href="{{ $reference->url }}" target="_blank" class="text-blue-600 underline">
-                                {{ $reference->description ?? $reference->url }}
-                            </a>
+                        <div class="flex-1">
+                            <div class="flex items-center mb-1">
+                                <a href="{{ $reference->url }}" target="_blank" class="text-blue-600 underline flex-1">
+                                    {{ $reference->description ?? $reference->url }}
+                                </a>
+                            </div>
+                            <!-- Reference status badges -->
+                            <div class="flex items-center space-x-2 mt-1">
+                                @if($reference->is_valid)
+                                    <span title="Valid URL" class="text-green-500 text-xs">✅ Valid</span>
+                                @else
+                                    <span title="URL not reachable" class="text-red-500 text-xs">❌ Invalid</span>
+                                @endif
+
+                                @if($reference->is_reputable)
+                                    <span title="Reputable Source" class="text-yellow-500 text-xs">⭐ Trusted</span>
+                                @else
+                                    <span title="Source not in trusted list" class="text-orange-500 text-xs">⚠️ Unverified</span>
+                                @endif
+
+                                @if($reference->is_relevant)
+                                    <span title="Relevant to claim ({{ number_format($reference->similarity_score * 100, 1) }}% match)" class="text-blue-500 text-xs">🔗 Relevant</span>
+                                @elseif($reference->similarity_score !== null)
+                                    <span title="Low relevance ({{ number_format($reference->similarity_score * 100, 1) }}% match)" class="text-gray-500 text-xs">🔗 Low relevance</span>
+                                @endif
+                            </div>
                         </div>
                         @auth
                             @if(Auth::id() === $con->user_id)

@@ -49,6 +49,30 @@
                 <h6 class="text-gray-500">Author</h6>
             </div>
         </div>
+
+        <!-- Edit/Delete buttons for post owner -->
+        @auth
+            @if(Auth::id() === $post->user_id && $post->parent_id === null)
+                <div class="flex items-center space-x-2">
+                    <a href="{{ route('posts.edit', $post) }}"
+                       class="text-blue-600 hover:text-blue-800 p-2 rounded-full hover:bg-blue-50 transition-colors"
+                       title="Edit Discussion"
+                       onclick="event.stopPropagation();">
+                        <i class="fas fa-edit text-sm"></i>
+                    </a>
+                    <form action="{{ route('posts.destroy', $post) }}" method="POST" class="inline"
+                          onsubmit="event.stopPropagation(); return confirm('Are you sure you want to delete this discussion? This action cannot be undone.');">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit"
+                                class="text-red-600 hover:text-red-800 p-2 rounded-full hover:bg-red-50 transition-colors"
+                                title="Delete Discussion">
+                            <i class="fas fa-trash text-sm"></i>
+                        </button>
+                    </form>
+                </div>
+            @endif
+        @endauth
     </footer>
 
     <!-- Floating Modal with Blur Effect -->

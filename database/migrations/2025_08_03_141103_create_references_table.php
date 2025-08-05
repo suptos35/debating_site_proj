@@ -20,6 +20,7 @@ public function up()
         $table->timestamps();
 
         $table->foreign('post_id')->references('id')->on('posts')->onDelete('cascade');
+
     });
 }
 

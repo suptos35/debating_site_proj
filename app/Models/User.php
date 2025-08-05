@@ -60,4 +60,14 @@ public function likedPosts()
 {
     return $this->belongsToMany(Post::class, 'likes', 'user_id', 'post_id');
 }
+
+public function polls()
+{
+    return $this->hasMany(Poll::class);
+}
+
+public function pollVotes()
+{
+    return $this->hasMany(PollVote::class);
+}
 }

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Post;
 use App\Models\Category;
+use App\Models\Poll;
 
 class HomeController extends Controller
 {
@@ -16,7 +17,13 @@ class HomeController extends Controller
         // Fetch the first 9 categories
         $categories = Category::limit(9)->get();
 
-        return view('home', compact('posts', 'categories'));
+        // Get polls for display
+        $polls = Poll::with(['options', 'user'])
+            ->orderBy('created_at', 'desc')
+            ->take(10)
+            ->get();
+
+        return view('home', compact('posts', 'categories', 'polls'));
     }
 }
 

@@ -9,7 +9,15 @@ class Reference extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['post_id', 'url', 'description'];
+    protected $fillable = [
+        'post_id',
+        'url',
+        'description',
+        'is_valid',
+        'is_reputable',
+        'is_relevant',
+        'similarity_score'
+    ];
 
     public function post()
     {

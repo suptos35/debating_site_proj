@@ -11,6 +11,7 @@ use App\Http\Controllers\HomeController;
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\LikeController;
 use App\Http\Controllers\ReferenceController;
+use App\Http\Controllers\PollController;
 
 Route::get('/', [HomeController::class, 'index']);
 
@@ -57,10 +58,19 @@ Route::middleware('auth')->group(function () {
 });
 
 Route::post('/posts', [PostController::class, 'store'])->name('posts.store')->middleware('auth');
+Route::get('/posts/{post}/edit', [PostController::class, 'edit'])->name('posts.edit')->middleware('auth');
+Route::put('/posts/{post}', [PostController::class, 'update'])->name('posts.update')->middleware('auth');
+Route::delete('/posts/{post}', [PostController::class, 'destroy'])->name('posts.destroy')->middleware('auth');
 Route::post('/arguments', [PostController::class, 'storeArgument'])->name('arguments.store')->middleware('auth');
 Route::post('/posts/{post}/like', [LikeController::class, 'toggle'])->name('posts.like');
 
 Route::post('/posts/{post}/references', [ReferenceController::class, 'store'])->middleware('auth')->name('references.store');
 Route::delete('/references/{reference}', [ReferenceController::class, 'destroy'])->middleware('auth')->name('references.delete');
+
+// Poll routes
+Route::get('/polls', [PollController::class, 'index'])->name('polls.index');
+Route::post('/polls', [PollController::class, 'store'])->middleware('auth')->name('polls.store');
+Route::post('/polls/{poll}/vote', [PollController::class, 'vote'])->middleware('auth')->name('polls.vote');
+Route::delete('/polls/{poll}', [PollController::class, 'destroy'])->middleware('auth')->name('polls.destroy');
 
 require __DIR__.'/auth.php';
