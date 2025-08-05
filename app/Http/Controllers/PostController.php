@@ -67,11 +67,6 @@ class PostController extends Controller
             abort(403, 'You can only edit your own posts.');
         }
 
-        // Only allow editing main posts (not arguments)
-        if ($post->parent_id !== null) {
-            abort(403, 'Arguments cannot be edited directly.');
-        }
-
         $categories = \App\Models\Category::all();
         $postCategories = $post->categories->pluck('id')->toArray();
 
@@ -109,7 +104,7 @@ class PostController extends Controller
                     $post->categories()->detach();
                 }
 
-                return redirect()->route('posts.show', $post)->with('success', 'Discussion updated successfully!');
+                return redirect('/post/' . $post->id)->with('success', 'Discussion updated successfully!');
 
             } else {
                 // Argument - only validate content
@@ -121,7 +116,7 @@ class PostController extends Controller
                     'content' => $validated['content'],
                 ]);
 
-                return redirect()->route('posts.show', $post->parent_id)->with('success', 'Argument updated successfully!');
+                return redirect('/post/' . $post->parent_id)->with('success', 'Argument updated successfully!');
             }
 
         } catch (\Exception $e) {

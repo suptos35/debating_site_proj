@@ -12,6 +12,7 @@ use App\Http\Controllers\PostController;
 use App\Http\Controllers\LikeController;
 use App\Http\Controllers\ReferenceController;
 use App\Http\Controllers\PollController;
+use App\Http\Controllers\DevController;
 
 Route::get('/', [HomeController::class, 'index']);
 
@@ -43,7 +44,8 @@ Route::get('/index', function () {
 Route::get('/post/{post}', function (Post $post) {
     $pros = $post->pros;
     $cons = $post->cons;
-    return view('points', ['post' => $post, 'pros' => $pros, 'cons' => $cons]);
+    $categories = \App\Models\Category::all();
+    return view('points', ['post' => $post, 'pros' => $pros, 'cons' => $cons, 'categories' => $categories]);
 });
 
 
@@ -72,5 +74,17 @@ Route::get('/polls', [PollController::class, 'index'])->name('polls.index');
 Route::post('/polls', [PollController::class, 'store'])->middleware('auth')->name('polls.store');
 Route::post('/polls/{poll}/vote', [PollController::class, 'vote'])->middleware('auth')->name('polls.vote');
 Route::delete('/polls/{poll}', [PollController::class, 'destroy'])->middleware('auth')->name('polls.destroy');
+
+// Development routes (only work in local environment)
+if (app()->environment('local')) {
+    Route::get('/dev', [DevController::class, 'dashboard'])->name('dev.dashboard');
+    Route::post('/dev/create-user', [DevController::class, 'createUser'])->name('dev.create-user');
+    Route::post('/dev/login-as/{user}', [DevController::class, 'loginAs'])->name('dev.login-as');
+    Route::post('/dev/create-post', [DevController::class, 'createPost'])->name('dev.create-post');
+    Route::post('/dev/create-arguments/{post}', [DevController::class, 'createArguments'])->name('dev.create-arguments');
+    Route::post('/dev/create-poll', [DevController::class, 'createPoll'])->name('dev.create-poll');
+    Route::post('/dev/reset-data', [DevController::class, 'resetData'])->name('dev.reset-data');
+    Route::post('/dev/logout', [DevController::class, 'logout'])->name('dev.logout');
+}
 
 require __DIR__.'/auth.php';
