@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\LikeController;
+use App\Http\Controllers\ReferenceController;
 
 Route::get('/', [HomeController::class, 'index']);
 
@@ -58,5 +59,8 @@ Route::middleware('auth')->group(function () {
 Route::post('/posts', [PostController::class, 'store'])->name('posts.store')->middleware('auth');
 Route::post('/arguments', [PostController::class, 'storeArgument'])->name('arguments.store')->middleware('auth');
 Route::post('/posts/{post}/like', [LikeController::class, 'toggle'])->name('posts.like');
+
+Route::post('/posts/{post}/references', [ReferenceController::class, 'store'])->middleware('auth')->name('references.store');
+Route::delete('/references/{reference}', [ReferenceController::class, 'destroy'])->middleware('auth')->name('references.delete');
 
 require __DIR__.'/auth.php';

@@ -65,4 +65,9 @@ public function isLikedByUser($userId)
     return $this->likes()->where('user_id', $userId)->exists();
 }
 
+public function references()
+{
+    return $this->hasMany(Reference::class);
+}
+
 }

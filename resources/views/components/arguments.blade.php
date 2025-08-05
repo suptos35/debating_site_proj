@@ -28,6 +28,14 @@
             <div class="flex justify-between items-center mt-2 text-sm text-gray-600">
                 <!-- Username (Left aligned, smaller, moved right, underlined) -->
                 <span class="underline text-xs ml-2">{{$pro->user->name}}</span>
+                <!-- Reference icon/word -->
+<button type="button"
+    data-modal-target="reference-modal-{{ $pro->id }}"
+    data-modal-toggle="reference-modal-{{ $pro->id }}"
+    class="flex items-center text-blue-600 hover:underline text-xs ml-2">
+    <i class="fas fa-link mr-1"></i> References
+</button>
+<span class="ml-1 text-xs text-gray-400">({{ $pro->references->count() }})</span>
                 <!-- Like icon and count (Right aligned, slightly moved left) -->
                 <div class="flex items-center">
                     <i
@@ -38,6 +46,56 @@
                     </i>
                     <span class="text-xs ml-1 like-count">{{$pro->like_count}}</span>
                 </div>
+                <!-- Reference Modal -->
+<div id="reference-modal-{{ $pro->id }}" tabindex="-1" aria-hidden="true"
+    class="fixed top-0 left-0 right-0 z-50 hidden w-full p-4 overflow-x-hidden overflow-y-auto md:inset-0 h-[calc(100%-1rem)] max-h-full">
+    <div class="relative w-full max-w-md mx-auto">
+        <div class="relative bg-white rounded-lg shadow dark:bg-white">
+            <div class="flex items-start justify-between p-4 border-b rounded-t dark:border-gray-200">
+                <h3 class="text-lg font-semibold text-blue-800">References</h3>
+                <button type="button" class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm w-8 h-8 ml-auto inline-flex justify-center items-center"
+                    data-modal-hide="reference-modal-{{ $pro->id }}">
+                    <span class="sr-only">Close modal</span>
+                </button>
+            </div>
+            <div class="p-6 space-y-4">
+                @forelse($pro->references as $reference)
+                    <div class="flex items-center justify-between border-b pb-2 mb-2">
+                        <div>
+                            <a href="{{ $reference->url }}" target="_blank" class="text-blue-600 underline">
+                                {{ $reference->description ?? $reference->url }}
+                            </a>
+                        </div>
+                        @auth
+                            @if(Auth::id() === $pro->user_id)
+                                <!-- Delete button -->
+                                <form action="{{ route('references.delete', $reference) }}" method="POST" onsubmit="return confirm('Delete this reference?');">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="text-red-600 text-xs ml-2">Delete</button>
+                                </form>
+                            @endif
+                        @endauth
+                    </div>
+                @empty
+                    <div class="text-gray-400">No references yet.</div>
+                @endforelse
+
+                @auth
+                    @if(Auth::id() === $pro->user_id)
+                        <!-- Add Reference Form -->
+                        <form action="{{ route('references.store', $pro) }}" method="POST" class="mt-4">
+                            @csrf
+                            <input type="url" name="url" class="w-full mb-2 p-2 border rounded" placeholder="Reference URL" required>
+                            <input type="text" name="description" class="w-full mb-2 p-2 border rounded" placeholder="Description (optional)">
+                            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded text-sm">Add Reference</button>
+                        </form>
+                    @endif
+                @endauth
+            </div>
+        </div>
+    </div>
+</div>
             </div>
         </div>
         @endforeach
@@ -65,6 +123,14 @@
             <div class="flex justify-between items-center mt-2 text-sm text-gray-600">
                 <!-- Username (Left aligned, smaller, moved right, underlined) -->
                 <span class="underline text-xs ml-2">{{$con->user->name}}</span>
+                <!-- Reference icon/word -->
+<button type="button"
+    data-modal-target="reference-modal-{{ $con->id }}"
+    data-modal-toggle="reference-modal-{{ $con->id }}"
+    class="flex items-center text-blue-600 hover:underline text-xs ml-2">
+    <i class="fas fa-link mr-1"></i> References
+</button>
+<span class="ml-1 text-xs text-gray-400">({{ $con->references->count() }})</span>
                 <!-- Like icon and count (Right aligned, slightly moved left) -->
                 <div class="flex items-center">
                     <i
@@ -75,6 +141,56 @@
                     </i>
                     <span class="text-xs ml-1 like-count">{{$con->like_count}}</span>
                 </div>
+                <!-- Reference Modal -->
+<div id="reference-modal-{{ $con->id }}" tabindex="-1" aria-hidden="true"
+    class="fixed top-0 left-0 right-0 z-50 hidden w-full p-4 overflow-x-hidden overflow-y-auto md:inset-0 h-[calc(100%-1rem)] max-h-full">
+    <div class="relative w-full max-w-md mx-auto">
+        <div class="relative bg-white rounded-lg shadow dark:bg-white">
+            <div class="flex items-start justify-between p-4 border-b rounded-t dark:border-gray-200">
+                <h3 class="text-lg font-semibold text-blue-800">References</h3>
+                <button type="button" class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm w-8 h-8 ml-auto inline-flex justify-center items-center"
+                    data-modal-hide="reference-modal-{{ $con->id }}">
+                    <span class="sr-only">Close modal</span>
+                </button>
+            </div>
+            <div class="p-6 space-y-4">
+                @forelse($con->references as $reference)
+                    <div class="flex items-center justify-between border-b pb-2 mb-2">
+                        <div>
+                            <a href="{{ $reference->url }}" target="_blank" class="text-blue-600 underline">
+                                {{ $reference->description ?? $reference->url }}
+                            </a>
+                        </div>
+                        @auth
+                            @if(Auth::id() === $con->user_id)
+                                <!-- Delete button -->
+                                <form action="{{ route('references.delete', $reference) }}" method="POST" onsubmit="return confirm('Delete this reference?');">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="text-red-600 text-xs ml-2">Delete</button>
+                                </form>
+                            @endif
+                        @endauth
+                    </div>
+                @empty
+                    <div class="text-gray-400">No references yet.</div>
+                @endforelse
+
+                @auth
+                    @if(Auth::id() === $con->user_id)
+                        <!-- Add Reference Form -->
+                        <form action="{{ route('references.store', $con) }}" method="POST" class="mt-4">
+                            @csrf
+                            <input type="url" name="url" class="w-full mb-2 p-2 border rounded" placeholder="Reference URL" required>
+                            <input type="text" name="description" class="w-full mb-2 p-2 border rounded" placeholder="Description (optional)">
+                            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded text-sm">Add Reference</button>
+                        </form>
+                    @endif
+                @endauth
+            </div>
+        </div>
+    </div>
+</div>
             </div>
         </div>
         @endforeach
