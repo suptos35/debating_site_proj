@@ -825,18 +825,6 @@
                                     </div>
                                     <input type="text" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent" placeholder="Option 2">
                                 </div>
-                                <div class="flex items-center space-x-2">
-                                    <div class="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center">
-                                        <span class="text-green-600 text-xs font-medium">3</span>
-                                    </div>
-                                    <input type="text" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent" placeholder="Option 3">
-                                </div>
-                                <div class="flex items-center space-x-2">
-                                    <div class="w-6 h-6 bg-orange-100 rounded-full flex items-center justify-center">
-                                        <span class="text-orange-600 text-xs font-medium">4</span>
-                                    </div>
-                                    <input type="text" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent" placeholder="Option 4 (optional)">
-                                </div>
                                 <button type="button" class="text-purple-600 hover:text-purple-800 text-sm font-medium">
                                     <i class="fas fa-plus mr-1"></i> Add Another Option
                                 </button>
