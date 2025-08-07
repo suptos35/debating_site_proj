@@ -148,9 +148,7 @@
                                         <span class="flex items-center text-blue-600">
                                             <i class="fas fa-comments mr-1"></i> 41
                                         </span>
-                                        <span class="flex items-center text-purple-600">
-                                            <i class="fas fa-link mr-1"></i> 8
-                                        </span>
+
                                     </div>
                                 </div>
                             </div>

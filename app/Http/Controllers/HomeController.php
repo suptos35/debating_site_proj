@@ -11,8 +11,11 @@ class HomeController extends Controller
 {
     public function index()
     {
-        // Fetch posts where parent_id is NULL, along with categories and user
-        $posts = Post::whereNull('parent_id')->with('categories', 'user')->get();
+        // Fetch posts where parent_id is NULL, along with categories and user, ordered by latest first
+        $posts = Post::whereNull('parent_id')
+            ->with('categories', 'user')
+            ->orderBy('created_at', 'desc')
+            ->get();
 
         // Fetch the first 9 categories
         $categories = Category::limit(9)->get();

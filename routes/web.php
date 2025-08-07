@@ -98,114 +98,333 @@ if (app()->environment('local')) {
     })->name('presentation.argument');
 
     Route::get('/presentation/categories', function () {
-        $categories = [
-            [
-                'name' => 'Science', 'slug' => 'science', 'icon' => 'fas fa-atom', 'bg_color' => 'bg-blue-600',
-                'description' => 'Scientific research, discoveries, and evidence-based discussions.',
-                'discussions_count' => 127, 'weekly_posts' => 8,
-                'top_writers' => [
-                    ['initials' => 'SC', 'bg' => 'bg-blue-100', 'text' => 'text-blue-600'],
-                    ['initials' => 'MT', 'bg' => 'bg-orange-100', 'text' => 'text-orange-600'],
-                ]
-            ],
-            [
-                'name' => 'Technology', 'slug' => 'technology', 'icon' => 'fas fa-robot', 'bg_color' => 'bg-purple-600',
-                'description' => 'AI, software, hardware, and emerging tech discussions.',
-                'discussions_count' => 98, 'weekly_posts' => 12,
-                'top_writers' => [
-                    ['initials' => 'MR', 'bg' => 'bg-purple-100', 'text' => 'text-purple-600'],
-                    ['initials' => 'AL', 'bg' => 'bg-gray-100', 'text' => 'text-gray-600'],
-                ]
-            ],
-            [
-                'name' => 'Health', 'slug' => 'health', 'icon' => 'fas fa-heartbeat', 'bg_color' => 'bg-green-600',
-                'description' => 'Medical research, nutrition, and wellness topics.',
-                'discussions_count' => 84, 'weekly_posts' => 6,
-                'top_writers' => [
-                    ['initials' => 'JP', 'bg' => 'bg-green-100', 'text' => 'text-green-600'],
-                    ['initials' => 'LM', 'bg' => 'bg-pink-100', 'text' => 'text-pink-600'],
-                ]
-            ]
-        ];
+        // Get the original category objects with post counts
+        $categoryData = Category::withCount('posts')->get();
 
-        return view('presentation.categories', compact('categories'));
+        // Process categories for the presentation view
+        $categoriesForView = $categoryData->map(function ($category) {
+            return [
+                'id' => $category->id, // Include the ID
+                'name' => $category->name,
+                'icon' => 'fas fa-folder', // Default icon
+                'bg_color' => 'bg-gray-600', // Default background color
+                'description' => $category->description ?? 'No description available.',
+                'discussions_count' => $category->posts_count,
+                'weekly_posts' => rand(1, 20), // Replace with actual logic if you track weekly posts
+                'top_writers' => [
+                    ['initials' => 'AB', 'bg' => 'bg-blue-100', 'text' => 'text-blue-600'],
+                    ['initials' => 'CD', 'bg' => 'bg-orange-100', 'text' => 'text-orange-600'],
+                ],
+            ];
+        });
+
+        // Pass both the original category objects (for the main_layout) and the presentation data
+        return view('presentation.categories', [
+            'categories' => $categoryData, // Original objects for main_layout dropdown
+            'categoriesForView' => $categoriesForView // Processed array data for the presentation view
+        ]);
     })->name('presentation.categories');
 
-    Route::get('/presentation/writers', function () {
-        $writers = [
-            [
-                'name' => 'Dr. Sarah Chen', 'slug' => 'dr-sarah-chen', 'title' => 'Environmental Scientist',
-                'initials' => 'SC', 'avatar_class' => 'bg-blue-100', 'text_class' => 'text-blue-600',
-                'bio' => 'Climate researcher specializing in renewable energy systems.',
-                'posts_count' => 42, 'total_likes' => 1247, 'followers' => 2834,
-                'specialties' => ['Climate Science', 'Renewable Energy'], 'last_active' => '2 hours ago', 'rating' => 4.8
-            ],
-            [
-                'name' => 'Marcus Rodriguez', 'slug' => 'marcus-rodriguez', 'title' => 'Tech Policy Analyst',
-                'initials' => 'MR', 'avatar_class' => 'bg-purple-100', 'text_class' => 'text-purple-600',
-                'bio' => 'Expert in AI ethics and technology regulation.',
-                'posts_count' => 38, 'total_likes' => 1089, 'followers' => 2156,
-                'specialties' => ['AI Ethics', 'Tech Policy'], 'last_active' => '5 hours ago', 'rating' => 4.7
-            ],
-            [
-                'name' => 'Dr. James Park', 'slug' => 'dr-james-park', 'title' => 'Health Researcher',
-                'initials' => 'JP', 'avatar_class' => 'bg-green-100', 'text_class' => 'text-green-600',
-                'bio' => 'Nutrition scientist focused on dietary interventions.',
-                'posts_count' => 29, 'total_likes' => 892, 'followers' => 1743,
-                'specialties' => ['Nutrition', 'Public Health'], 'last_active' => '1 day ago', 'rating' => 4.9
-            ]
-        ];
+        Route::get('/presentation/writers', function () {
+        // Get users who have published posts (where parent_id is null)
+        $users = User::whereHas('posts', function($query) {
+            $query->whereNull('parent_id');
+        })
+        ->withCount(['posts' => function($query) {
+            $query->whereNull('parent_id'); // Only count parent posts
+        }])
+        ->withSum('posts', 'like_count') // Sum all likes on their posts
+        ->get();
 
-        return view('presentation.writers', compact('writers'));
+        // Format writers for the view with additional hardcoded metadata
+        $writers = $users->map(function($user) {
+            // Generate initials from name
+            $nameParts = explode(' ', $user->name);
+            $initials = '';
+            if (count($nameParts) >= 1) {
+                $initials .= strtoupper(substr($nameParts[0], 0, 1));
+                if (count($nameParts) >= 2) {
+                    $initials .= strtoupper(substr($nameParts[1], 0, 1));
+                }
+            }
+
+            // Determine avatar class and text class based on user ID
+            $avatarClasses = ['bg-blue-100', 'bg-green-100', 'bg-purple-100', 'bg-yellow-100', 'bg-pink-100', 'bg-indigo-100'];
+            $textClasses = ['text-blue-600', 'text-green-600', 'text-purple-600', 'text-yellow-600', 'text-pink-600', 'text-indigo-600'];
+            $avatarIndex = $user->id % count($avatarClasses);
+
+            // Generate random specialties for demonstration
+            $allSpecialties = [
+                'Climate Science', 'Renewable Energy', 'AI Ethics', 'Tech Policy',
+                'Health Research', 'Education', 'Psychology', 'Economics',
+                'Political Science', 'Public Policy', 'History', 'Sociology'
+            ];
+            $specialtyCount = min(3, 1 + ($user->id % 3)); // 1-3 specialties based on ID
+            $specialties = [];
+            for ($i = 0; $i < $specialtyCount; $i++) {
+                $specialties[] = $allSpecialties[($user->id + $i) % count($allSpecialties)];
+            }
+
+            // Generate a slug from the name
+            $slug = strtolower(str_replace(' ', '-', $user->name));
+
+            return [
+                'id' => $user->id,
+                'name' => $user->name,
+                'slug' => $slug,
+                'title' => $user->role ?? 'Community Member', // Use role if available or default
+                'initials' => $initials,
+                'avatar_class' => $avatarClasses[$avatarIndex],
+                'text_class' => $textClasses[$avatarIndex],
+                'bio' => 'Contributor with expertise in various topics.', // Hardcoded bio
+                'posts_count' => $user->posts_count ?? 0,
+                'total_likes' => $user->posts_sum_like_count ?? 0,
+                'followers' => rand(50, 3000), // Random follower count for demo
+                'specialties' => $specialties,
+                'last_active' => rand(1, 24) . ' hours ago', // Random last active time
+                'rating' => number_format(3.5 + (mt_rand(0, 15) / 10), 1) // Random rating between 3.5-5.0
+            ];
+        });
+
+        // Pass both the original user objects (for the main_layout) and the processed writers data
+        return view('presentation.writers', [
+            'users' => $users, // Original objects for main_layout if needed
+            'writers' => $writers // Processed array data for the presentation view
+        ]);
     })->name('presentation.writers');
 
     Route::get('/presentation/category/{category}', function ($category) {
-        $posts = $category == 'science' ? [
-            [
-                'title' => 'Should nuclear energy be prioritized over renewable sources?',
-                'excerpt' => 'With climate targets becoming increasingly urgent, the debate intensifies.',
-                'author' => 'Dr. Sarah Chen', 'likes' => 23, 'comments' => 41, 'references' => 8,
-                'gradient' => 'from-blue-400 to-blue-600', 'icon' => 'fas fa-atom',
-                'categories' => [
-                    ['name' => 'Science', 'class' => 'bg-blue-100 text-blue-600'],
-                    ['name' => 'Environment', 'class' => 'bg-green-100 text-green-600']
-                ]
-            ]
-        ] : [
-            [
-                'title' => 'Sample Discussion in ' . ucfirst($category),
-                'excerpt' => 'This is a sample discussion.',
-                'author' => 'Sample Author', 'likes' => 10, 'comments' => 15, 'references' => 3,
-                'gradient' => 'from-gray-400 to-gray-600', 'icon' => 'fas fa-comment',
-                'categories' => [['name' => ucfirst($category), 'class' => 'bg-gray-100 text-gray-600']]
-            ]
-        ];
+        // Try to find the category by ID first, then by name if that fails
+        $categoryModel = Category::find($category);
 
-        return view('presentation.category', compact('category', 'posts'));
+        if (!$categoryModel) {
+            // If not found by ID, try finding by name
+            $categoryModel = Category::where('name', $category)->first();
+        }
+
+        if (!$categoryModel) {
+            abort(404);
+        }        // Get posts from this category
+        $dbPosts = $categoryModel->posts()
+            ->whereNull('parent_id')
+            ->with(['user', 'categories', 'references', 'children'])
+            ->get();
+
+        // Format posts for display in the template
+        $posts = $dbPosts->map(function($post) {
+            // Determine icon and gradient based on category or use default
+            $icon = 'fas fa-comment';
+            $gradient = 'from-gray-400 to-gray-600';
+
+            // If post has categories, use the first one's properties
+            if ($post->categories->isNotEmpty()) {
+                $mainCategory = $post->categories->first();
+                // Use name instead of slug for category identification
+                $categoryName = strtolower($mainCategory->name);
+                if (strpos($categoryName, 'science') !== false) {
+                    $icon = 'fas fa-atom';
+                    $gradient = 'from-blue-400 to-blue-600';
+                } elseif (strpos($categoryName, 'tech') !== false) {
+                    $icon = 'fas fa-robot';
+                    $gradient = 'from-purple-400 to-purple-600';
+                } elseif (strpos($categoryName, 'environment') !== false || strpos($categoryName, 'nature') !== false) {
+                    $icon = 'fas fa-seedling';
+                    $gradient = 'from-green-400 to-green-600';
+                } elseif (strpos($categoryName, 'health') !== false || strpos($categoryName, 'medical') !== false) {
+                    $icon = 'fas fa-heartbeat';
+                    $gradient = 'from-red-400 to-red-600';
+                } elseif (strpos($categoryName, 'politic') !== false || strpos($categoryName, 'government') !== false) {
+                    $icon = 'fas fa-landmark';
+                    $gradient = 'from-yellow-400 to-yellow-600';
+                } elseif (strpos($categoryName, 'econom') !== false || strpos($categoryName, 'financ') !== false) {
+                    $icon = 'fas fa-chart-line';
+                    $gradient = 'from-indigo-400 to-indigo-600';
+                }
+            }
+
+            // Format categories for display
+            $formattedCategories = $post->categories->map(function($cat) {
+                $class = 'bg-gray-100 text-gray-600';
+
+                // Use name instead of slug for category identification
+                $categoryName = strtolower($cat->name);
+                if (strpos($categoryName, 'science') !== false) {
+                    $class = 'bg-blue-100 text-blue-600';
+                } elseif (strpos($categoryName, 'tech') !== false) {
+                    $class = 'bg-purple-100 text-purple-600';
+                } elseif (strpos($categoryName, 'environment') !== false || strpos($categoryName, 'nature') !== false) {
+                    $class = 'bg-green-100 text-green-600';
+                } elseif (strpos($categoryName, 'health') !== false || strpos($categoryName, 'medical') !== false) {
+                    $class = 'bg-red-100 text-red-600';
+                } elseif (strpos($categoryName, 'politic') !== false || strpos($categoryName, 'government') !== false) {
+                    $class = 'bg-yellow-100 text-yellow-600';
+                } elseif (strpos($categoryName, 'econom') !== false || strpos($categoryName, 'financ') !== false) {
+                    $class = 'bg-indigo-100 text-indigo-600';
+                }                return [
+                    'name' => $cat->name,
+                    'class' => $class
+                ];
+            })->toArray();
+
+            return [
+                'id' => $post->id,
+                'title' => $post->title,
+                'excerpt' => $post->excerpt ?? substr(strip_tags($post->content), 0, 150) . '...',
+                'author' => $post->user->name ?? 'Anonymous',
+                'likes' => $post->like_count ?? 0,
+                'comments' => $post->children->count() ?? 0,
+                'references' => $post->references->count() ?? 0,
+                'gradient' => $gradient,
+                'icon' => $icon,
+                'categories' => $formattedCategories
+            ];
+        })->toArray();
+
+        return view('presentation.category', [
+            'category' => $category,
+            'category_model' => $categoryModel,
+            'posts' => $posts
+        ]);
     })->name('presentation.category');
 
     Route::get('/presentation/writer/{slug}', function ($slug) {
-        $writer = $slug == 'dr-sarah-chen' ? [
-            'name' => 'Dr. Sarah Chen', 'title' => 'Environmental Scientist & Climate Researcher',
-            'initials' => 'SC', 'avatar_class' => 'bg-blue-100', 'text_class' => 'text-blue-600',
-            'posts_count' => 42, 'total_likes' => 1247, 'joined' => 'March 2023',
-            'posts' => [
-                [
-                    'title' => 'Should nuclear energy be prioritized over renewable sources?',
-                    'excerpt' => 'With climate targets becoming increasingly urgent, the debate intensifies.',
-                    'date' => '3 days ago', 'likes' => 23, 'comments' => 41, 'references' => 8,
-                    'gradient' => 'from-blue-400 to-blue-600', 'icon' => 'fas fa-atom',
-                    'categories' => [
-                        ['name' => 'Science', 'class' => 'bg-blue-100 text-blue-600'],
-                        ['name' => 'Environment', 'class' => 'bg-green-100 text-green-600']
-                    ]
-                ]
-            ]
-        ] : null;
+        // Find the user by matching slug (which is derived from the name)
+        $user = User::whereRaw('LOWER(REPLACE(name, " ", "-")) = ?', [strtolower($slug)])
+            ->withCount(['posts' => function($query) {
+                $query->whereNull('parent_id'); // Only count parent posts
+            }])
+            ->withSum('posts', 'like_count') // Sum all likes on their posts
+            ->first();
 
-        if (!$writer) abort(404);
+        if (!$user) {
+            abort(404);
+        }
 
-        $posts = $writer['posts'];
+        // Generate writer metadata similar to writers list
+        $nameParts = explode(' ', $user->name);
+        $initials = '';
+        if (count($nameParts) >= 1) {
+            $initials .= strtoupper(substr($nameParts[0], 0, 1));
+            if (count($nameParts) >= 2) {
+                $initials .= strtoupper(substr($nameParts[1], 0, 1));
+            }
+        }
+
+        // Determine avatar class and text class based on user ID
+        $avatarClasses = ['bg-blue-100', 'bg-green-100', 'bg-purple-100', 'bg-yellow-100', 'bg-pink-100', 'bg-indigo-100'];
+        $textClasses = ['text-blue-600', 'text-green-600', 'text-purple-600', 'text-yellow-600', 'text-pink-600', 'text-indigo-600'];
+        $avatarIndex = $user->id % count($avatarClasses);
+
+        // Generate random specialties for demonstration
+        $allSpecialties = [
+            'Climate Science', 'Renewable Energy', 'AI Ethics', 'Tech Policy',
+            'Health Research', 'Education', 'Psychology', 'Economics',
+            'Political Science', 'Public Policy', 'History', 'Sociology'
+        ];
+        $specialtyCount = min(3, 1 + ($user->id % 3)); // 1-3 specialties based on ID
+        $specialties = [];
+        for ($i = 0; $i < $specialtyCount; $i++) {
+            $specialties[] = $allSpecialties[($user->id + $i) % count($allSpecialties)];
+        }
+
+        // Format the joined date
+        $joinedDate = $user->created_at ? $user->created_at->format('F Y') : 'Unknown';
+
+        $writer = [
+            'id' => $user->id,
+            'name' => $user->name,
+            'slug' => $slug,
+            'title' => $user->role ?? 'Community Member', // Use role if available or default
+            'initials' => $initials,
+            'avatar_class' => $avatarClasses[$avatarIndex],
+            'text_class' => $textClasses[$avatarIndex],
+            'posts_count' => $user->posts_count ?? 0,
+            'total_likes' => $user->posts_sum_like_count ?? 0,
+            'joined' => $joinedDate,
+            'followers' => rand(50, 3000), // Random follower count for demo
+            'specialties' => $specialties,
+        ];
+
+        // Get the user's posts with related data
+        $dbPosts = $user->posts()
+            ->whereNull('parent_id')
+            ->with(['categories', 'references', 'children'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+            // Format posts for the template
+        $posts = $dbPosts->map(function($post) {
+            // Determine icon and gradient based on category or use default
+            $icon = 'fas fa-comment';
+            $gradient = 'from-gray-400 to-gray-600';
+
+            // If post has categories, use the first one's properties
+            if ($post->categories->isNotEmpty()) {
+                $mainCategory = $post->categories->first();
+                $categoryName = strtolower($mainCategory->name);
+                if (strpos($categoryName, 'science') !== false) {
+                    $icon = 'fas fa-atom';
+                    $gradient = 'from-blue-400 to-blue-600';
+                } elseif (strpos($categoryName, 'tech') !== false) {
+                    $icon = 'fas fa-robot';
+                    $gradient = 'from-purple-400 to-purple-600';
+                } elseif (strpos($categoryName, 'environment') !== false || strpos($categoryName, 'nature') !== false) {
+                    $icon = 'fas fa-seedling';
+                    $gradient = 'from-green-400 to-green-600';
+                } elseif (strpos($categoryName, 'health') !== false || strpos($categoryName, 'medical') !== false) {
+                    $icon = 'fas fa-heartbeat';
+                    $gradient = 'from-red-400 to-red-600';
+                } elseif (strpos($categoryName, 'politic') !== false || strpos($categoryName, 'government') !== false) {
+                    $icon = 'fas fa-landmark';
+                    $gradient = 'from-yellow-400 to-yellow-600';
+                } elseif (strpos($categoryName, 'econom') !== false || strpos($categoryName, 'financ') !== false) {
+                    $icon = 'fas fa-chart-line';
+                    $gradient = 'from-indigo-400 to-indigo-600';
+                }
+            }            // Format post date for display
+            $date = $post->created_at ? $post->created_at->diffForHumans() : 'Recently';
+
+            // Format categories for display
+            $formattedCategories = $post->categories->map(function($cat) {
+                $class = 'bg-gray-100 text-gray-600';
+
+                // Use name instead of slug for category identification
+                $categoryName = strtolower($cat->name);
+                if (strpos($categoryName, 'science') !== false) {
+                    $class = 'bg-blue-100 text-blue-600';
+                } elseif (strpos($categoryName, 'tech') !== false) {
+                    $class = 'bg-purple-100 text-purple-600';
+                } elseif (strpos($categoryName, 'environment') !== false || strpos($categoryName, 'nature') !== false) {
+                    $class = 'bg-green-100 text-green-600';
+                } elseif (strpos($categoryName, 'health') !== false || strpos($categoryName, 'medical') !== false) {
+                    $class = 'bg-red-100 text-red-600';
+                } elseif (strpos($categoryName, 'politic') !== false || strpos($categoryName, 'government') !== false) {
+                    $class = 'bg-yellow-100 text-yellow-600';
+                } elseif (strpos($categoryName, 'econom') !== false || strpos($categoryName, 'financ') !== false) {
+                    $class = 'bg-indigo-100 text-indigo-600';
+                }
+
+                return [
+                    'name' => $cat->name,
+                    'class' => $class
+                ];
+            })->toArray();
+
+
+            return [
+                'id' => $post->id,
+                'title' => $post->title,
+                'excerpt' => $post->excerpt ?? substr(strip_tags($post->content), 0, 150) . '...',
+                'date' => $date,
+                'likes' => $post->like_count ?? 0,
+                'comments' => $post->children->count() ?? 0,
+                'references' => $post->references->count() ?? 0,
+                'gradient' => $gradient,
+                'icon' => $icon,
+                'categories' => $formattedCategories
+            ];
+        })->toArray();
+
         return view('presentation.writer', compact('writer', 'posts'));
     })->name('presentation.writer');
 

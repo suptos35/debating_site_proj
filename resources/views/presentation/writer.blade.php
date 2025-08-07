@@ -92,57 +92,69 @@
                 <span class="text-sm text-gray-500">{{ count($posts) }} discussions</span>
             </div>
 
+            @if(count($posts) > 0)
             <div class="lg:grid lg:grid-cols-3 gap-6 space-y-6 lg:space-y-0">
                 @foreach($posts as $post)
-                <article class="bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-100 card-hover">
-                    <div class="p-6">
-                        <!-- Image placeholder -->
-                        <div class="w-full h-48 bg-gradient-to-br {{ $post['gradient'] }} rounded-lg mb-4 flex items-center justify-center">
-                            <i class="{{ $post['icon'] }} text-white text-4xl"></i>
-                        </div>
-
-                        <!-- Categories -->
-                        <div class="space-x-2 mb-3">
-                            @foreach($post['categories'] as $cat)
-                            <span class="px-3 py-1 {{ $cat['class'] }} rounded-full text-xs font-medium">
-                                {{ $cat['name'] }}
-                            </span>
-                            @endforeach
-                        </div>
-
-                        <!-- Title -->
-                        <h3 class="text-xl font-semibold text-gray-900 mb-3 hover:text-blue-600 cursor-pointer transition-colors">
-                            {{ $post['title'] }}
-                        </h3>
-
-                        <!-- Excerpt -->
-                        <p class="text-gray-600 text-sm mb-4 line-clamp-3">
-                            {{ $post['excerpt'] }}
-                        </p>
-
-                        <!-- Stats -->
-                        <div class="flex items-center justify-between text-sm text-gray-500 border-t pt-4">
-                            <div class="flex items-center space-x-4">
-                                <span class="flex items-center">
-                                    <i class="fas fa-calendar mr-1"></i> {{ $post['date'] }}
-                                </span>
-                                <span class="flex items-center text-green-600">
-                                    <i class="fas fa-thumbs-up mr-1"></i> {{ $post['likes'] }}
-                                </span>
+                <a href="/post/{{ $post['id'] }}" class="block">
+                    <article class="bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-100 card-hover">
+                        <div class="p-6">
+                            <!-- Image placeholder -->
+                            <div class="w-full h-48 bg-gradient-to-br {{ $post['gradient'] }} rounded-lg mb-4 flex items-center justify-center">
+                                <i class="{{ $post['icon'] }} text-white text-4xl"></i>
                             </div>
-                            <div class="flex items-center space-x-3">
-                                <span class="flex items-center text-blue-600">
-                                    <i class="fas fa-comments mr-1"></i> {{ $post['comments'] }}
+
+                            <!-- Categories -->
+                            <div class="space-x-2 mb-3">
+                                @foreach($post['categories'] as $cat)
+                                <span class="px-3 py-1 {{ $cat['class'] }} rounded-full text-xs font-medium">
+                                    {{ $cat['name'] }}
                                 </span>
-                                <span class="flex items-center text-purple-600">
-                                    <i class="fas fa-link mr-1"></i> {{ $post['references'] }}
-                                </span>
+                                @endforeach
+                            </div>
+
+                            <!-- Title -->
+                            <h3 class="text-xl font-semibold text-gray-900 mb-3 hover:text-blue-600 transition-colors">
+                                {{ $post['title'] }}
+                            </h3>
+
+                            <!-- Excerpt -->
+                            <p class="text-gray-600 text-sm mb-4 line-clamp-3">
+                                {{ $post['excerpt'] }}
+                            </p>
+
+                            <!-- Stats -->
+                            <div class="flex items-center justify-between text-sm text-gray-500 border-t pt-4">
+                                <div class="flex items-center space-x-4">
+                                    <span class="flex items-center">
+                                        <i class="fas fa-calendar mr-1"></i> {{ $post['date'] }}
+                                    </span>
+                                    <span class="flex items-center text-green-600">
+                                        <i class="fas fa-thumbs-up mr-1"></i> {{ $post['likes'] }}
+                                    </span>
+                                </div>
+                                <div class="flex items-center space-x-3">
+                                    <span class="flex items-center text-blue-600">
+                                        <i class="fas fa-comments mr-1"></i> {{ $post['comments'] }}
+                                    </span>
+                                    <span class="flex items-center text-purple-600">
+                                        <i class="fas fa-link mr-1"></i> {{ $post['references'] }}
+                                    </span>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                </article>
+                    </article>
+                </a>
                 @endforeach
             </div>
+            @else
+            <div class="bg-white rounded-xl shadow-sm p-8 text-center">
+                <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-file-alt text-gray-400 text-xl"></i>
+                </div>
+                <h3 class="text-xl font-semibold text-gray-700 mb-2">No discussions yet</h3>
+                <p class="text-gray-500">{{ $writer['name'] }} hasn't created any discussions yet.</p>
+            </div>
+            @endif
         </div>
     </main>
 

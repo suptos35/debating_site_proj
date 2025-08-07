@@ -17,7 +17,7 @@
         .glass-effect { backdrop-filter: blur(10px); background: rgba(255, 255, 255, 0.9); }
     </style>
 </head>
-<body class="bg-gray-50 min-h-screen flex flex-col">
+<body class="bg-gray-50">
     <!-- Header - Based on homepage design -->
     <nav class="bg-white border-b border-gray-200 shadow-sm">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -94,27 +94,117 @@
         </div>
     </nav>
 
+    <!-- Hero Section with Categories from homepage -->
+    <div class="gradient-bg">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+            <!-- Search Field in Top Right -->
+            <div class="flex justify-end mb-8">
+                <form action="/search" method="GET" class="relative">
+                    <input type="text" name="q" placeholder="Search discussions..." class="w-80 px-4 py-2 pr-10 text-sm border border-white/20 bg-white/10 text-white placeholder-white/70 rounded-lg focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-transparent backdrop-blur-sm">
+                    <button type="submit" class="absolute inset-y-0 right-0 flex items-center pr-3">
+                        <i class="fas fa-search text-white/70 hover:text-white cursor-pointer"></i>
+                    </button>
+                </form>
+            </div>
 
+            <div class="text-center text-white">
+                <h1 class="text-4xl font-bold mb-4">Evidence-Based Discussions</h1>
+                <p class="text-xl text-blue-100 mb-8 max-w-2xl mx-auto">
+                    Join structured debates where every argument is backed by verified sources and credible references.
+                </p>
 
+                <!-- Categories display -->
+                {{-- @if($categories->count() > 0)
+                    <div class="flex flex-wrap justify-center gap-3 mb-8">
+                        @foreach($categories->take(10) as $category)
+                            <a href="/categories/{{ $category->id }}"
+                               class="px-4 py-2 bg-white/20 backdrop-blur-sm text-white rounded-full text-sm font-medium hover:bg-white/30 transition-all">
+                                {{ $category->name }}
+                            </a>
+                        @endforeach
+                        @if($categories->count() > 10)
+                            <a href="/categories"
+                               class="px-4 py-2 bg-white/10 backdrop-blur-sm text-white/80 rounded-full text-sm font-medium hover:bg-white/20 transition-all">
+                                View All...
+                            </a>
+                        @endif
+                    </div>
+                @endif --}}
+
+                <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                    @auth
+                        <button type="button" data-modal-target="post-modal" data-modal-toggle="post-modal"
+                            class="bg-white text-blue-600 px-6 py-3 rounded-lg font-semibold hover:bg-blue-50 transition-colors">
+                            Start a Discussion
+                        </button>
+                    @else
+                        <a href="{{ route('register') }}" class="bg-white text-blue-600 px-6 py-3 rounded-lg font-semibold hover:bg-blue-50 transition-colors">
+                            Join the Discussion
+                        </a>
+                    @endauth
+                    <a href="/categories" class="border-2 border-white text-white px-6 py-3 rounded-lg font-semibold hover:bg-white hover:text-blue-600 transition-all">
+                        Browse Topics
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Main Content -->
-    <main class="flex-1">
+    <main>
         {{ $slot }}
     </main>
 
-    <!-- Footer - Simplified version -->
+    <!-- Footer - From homepage -->
     <footer class="bg-gray-900 text-white mt-16">
-        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <div class="flex flex-col md:flex-row justify-between items-center">
-                <div class="flex items-center space-x-3 mb-4 md:mb-0">
-                    <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                        <i class="fas fa-balance-scale text-white text-sm"></i>
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+            <div class="grid md:grid-cols-4 gap-8">
+                <div class="md:col-span-2">
+                    <div class="flex items-center space-x-3 mb-4">
+                        <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-balance-scale text-white text-sm"></i>
+                        </div>
+                        <span class="text-2xl font-semibold">Factly</span>
                     </div>
-                    <span class="text-xl font-bold">Factly</span>
+                    <p class="text-gray-400 mb-4 max-w-md">
+                        Join evidence-based discussions where every argument is backed by credible sources and verified references.
+                    </p>
+                    <div class="flex space-x-4">
+                        <a href="#" class="text-gray-400 hover:text-white transition-colors">
+                            <i class="fab fa-twitter"></i>
+                        </a>
+                        <a href="#" class="text-gray-400 hover:text-white transition-colors">
+                            <i class="fab fa-facebook"></i>
+                        </a>
+                        <a href="#" class="text-gray-400 hover:text-white transition-colors">
+                            <i class="fab fa-linkedin"></i>
+                        </a>
+                    </div>
                 </div>
-                <div class="text-sm text-gray-400 text-center md:text-right">
-                    © 2025 Factly. Building the future of evidence-based discourse.
+
+                <div>
+                    <h4 class="font-semibold mb-4">Platform</h4>
+                    <ul class="space-y-2 text-sm text-gray-400">
+                        <li><a href="#" class="hover:text-white transition-colors">How it Works</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">Community Guidelines</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">Verification Process</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">Help Center</a></li>
+                    </ul>
                 </div>
+
+                <div>
+                    <h4 class="font-semibold mb-4">Legal</h4>
+                    <ul class="space-y-2 text-sm text-gray-400">
+                        <li><a href="#" class="hover:text-white transition-colors">Privacy Policy</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">Terms of Service</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">Cookie Policy</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">Contact Us</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="border-t border-gray-800 pt-8 mt-8 text-center text-sm text-gray-400">
+                <p>&copy; 2024 Factly. All rights reserved. Building better discourse through evidence.</p>
             </div>
         </div>
     </footer>
