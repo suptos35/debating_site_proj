@@ -73,6 +73,11 @@ public function pollVotes()
 
 public function views()
 {
-    return $this->hasMany(View::class);
+    return $this->hasMany(View::class, 'user_id');
+}
+
+public function viewsAsWriter()
+{
+    return $this->hasMany(View::class, 'writer_id');
 }
 }

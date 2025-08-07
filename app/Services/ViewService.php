@@ -21,7 +21,7 @@ class ViewService
     {
         // Get the writer ID (post author)
         $writerId = $post->user_id;
-        
+
         if (!$writerId) {
             // Skip if no writer ID (shouldn't happen)
             return;
