@@ -78,14 +78,14 @@
                     </h3>
                     <div class="space-y-3">
                         @forelse($popularCategories as $category)
-                            <a href="/catagory/{{ $category->id }}" class="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-100 hover:border-blue-200 transition-colors cursor-pointer">
+                            <a href="/presentation/category/{{ $category->id }}" class="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-100 hover:border-blue-200 transition-colors cursor-pointer">
                                 <div class="flex items-center space-x-3">
                                     @php
                                         // Choose icon based on category name
                                         $icon = 'fas fa-folder';
                                         $bgColor = 'bg-gray-600';
                                         $categoryName = strtolower($category->name);
-                                        
+
                                         if (strpos($categoryName, 'science') !== false) {
                                             $icon = 'fas fa-atom';
                                             $bgColor = 'bg-blue-600';
@@ -132,9 +132,9 @@
                     </h3>
                     <div class="space-y-3">
                         @forelse($popularWriters as $writer)
-                            <a href="/user/{{ $writer->id }}" class="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-100 hover:border-blue-200 transition-colors cursor-pointer">
+                            <a href="/presentation/writer/{{ strtolower(str_replace(' ', '-', $writer->name)) }}" class="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-100 hover:border-blue-200 transition-colors cursor-pointer">
                                 <div class="flex items-center space-x-3">
-                                    <div class="w-10 h-10 
+                                    <div class="w-10 h-10
                                         @php
                                             // Generate avatar background color based on user ID
                                             $avatarClasses = ['bg-blue-100', 'bg-green-100', 'bg-purple-100', 'bg-yellow-100', 'bg-pink-100', 'bg-indigo-100'];

@@ -34,13 +34,28 @@
                     <span class="flex items-center">
                         <i class="fas fa-user mr-1"></i> {{$post->user->name}}
                     </span>
-                    <span class="flex items-center text-green-600">
-                        <i class="fas fa-thumbs-up mr-1"></i> 23
+                    <span class="flex items-center text-green-600 like-button cursor-pointer" 
+                          data-post-id="{{ $post->id }}" 
+                          onclick="event.stopPropagation(); toggleLike(this, {{ $post->id }})">
+                        <i class="fas fa-thumbs-up mr-1 {{ Auth::check() && $post->isLikedByUser(Auth::id()) ? 'text-green-600' : 'text-gray-400' }}"></i> 
+                        <span class="like-count">{{ $post->like_count ?? 0 }}</span>
                     </span>
                 </div>
                 <div class="flex items-center space-x-3">
                     <span class="flex items-center text-blue-600">
-                        <i class="fas fa-comments mr-1"></i> 41
+                        <i class="fas fa-comments mr-1"></i> 
+                        @php
+                            // Function to count all children recursively
+                            function countAllChildren($post) {
+                                $count = $post->children()->count();
+                                foreach ($post->children as $child) {
+                                    $count += countAllChildren($child);
+                                }
+                                return $count;
+                            }
+                            $commentCount = countAllChildren($post);
+                            echo $commentCount;
+                        @endphp
                     </span>
                     <!-- Edit/Delete buttons for post owner -->
                     @auth
@@ -149,11 +164,12 @@
                         <!-- Action Buttons -->
                         <div class="flex items-center space-x-4">
                             <div class="flex items-center space-x-4 text-sm text-gray-500">
-                                <span class="flex items-center">
-                                    <i class="fas fa-thumbs-up mr-1 text-green-600"></i> 23
+                                <span class="flex items-center cursor-pointer" onclick="event.stopPropagation(); toggleLike(this, {{ $post->id }})">
+                                    <i class="fas fa-thumbs-up mr-1 {{ Auth::check() && $post->isLikedByUser(Auth::id()) ? 'text-green-600' : 'text-gray-400' }}"></i>
+                                    <span class="like-count">{{ $post->like_count ?? 0 }}</span>
                                 </span>
                                 <span class="flex items-center">
-                                    <i class="fas fa-comments mr-1 text-blue-600"></i> 41
+                                    <i class="fas fa-comments mr-1 text-blue-600"></i> {{ $commentCount }}
                                 </span>
                             </div>
                         </div>
@@ -172,3 +188,46 @@
         </div>
     </div>
 </div>
+
+<script>
+    // Function to toggle like for a post
+    function toggleLike(element, postId) {
+        @auth
+            // Send AJAX request
+            fetch(`/posts/${postId}/like`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({})
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update all instances of this post's like count
+                    const likeCountElements = document.querySelectorAll(`.like-button[data-post-id="${postId}"] .like-count, .modal-like-count-${postId}`);
+                    likeCountElements.forEach(el => {
+                        el.textContent = data.likeCount;
+                    });
+                    
+                    // Update all like button icons for this post
+                    const likeIcons = document.querySelectorAll(`.like-button[data-post-id="${postId}"] i, .modal-like-icon-${postId}`);
+                    likeIcons.forEach(icon => {
+                        if (data.liked) {
+                            icon.classList.remove('text-gray-400');
+                            icon.classList.add('text-green-600');
+                        } else {
+                            icon.classList.remove('text-green-600');
+                            icon.classList.add('text-gray-400');
+                        }
+                    });
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        @else
+            // Redirect to login or show login modal
+            alert('Please log in to like posts');
+        @endauth
+    }
+</script>
