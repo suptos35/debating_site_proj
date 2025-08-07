@@ -13,15 +13,13 @@ return new class extends Migration
     {
         Schema::create('views', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->nullable()->constrained()->onDelete('cascade');
+            $table->foreignId('writer_id')->nullable()->constrained('users')->onDelete('cascade');
             $table->foreignId('post_id')->constrained()->onDelete('cascade');
             $table->unsignedInteger('view_count')->default(1);
-            $table->string('session_id')->nullable();
-            $table->ipAddress('ip_address')->nullable();
             $table->timestamps();
-            
-            // Create a unique index to prevent duplicate entries
-            $table->unique(['user_id', 'post_id', 'session_id', 'ip_address'], 'view_unique');
+
+            // Create a unique index to prevent duplicate entries for the writer's posts
+            $table->unique(['writer_id', 'post_id'], 'view_unique');
         });
     }
 

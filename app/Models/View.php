@@ -8,19 +8,17 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class View extends Model
 {
     protected $fillable = [
-        'user_id',
+        'writer_id',
         'post_id',
         'view_count',
-        'session_id',
-        'ip_address',
     ];
 
     /**
-     * Get the user that owns the view.
+     * Get the writer (post author) associated with the view.
      */
-    public function user()
+    public function writer()
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class, 'writer_id');
     }
 
     /**

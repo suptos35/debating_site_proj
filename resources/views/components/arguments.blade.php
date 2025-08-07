@@ -56,7 +56,7 @@
                     </button>
                 </div>
             </div>
-            <div class="text-gray-900 mb-4">{{ $pro->content }}</div>
+            <a href="{{ url('/post/' . $pro->id) }}" class="text-gray-900 mb-4 block hover:text-blue-700">{{ $pro->content }}</a>
             <div class="flex items-center justify-between text-xs text-gray-500 border-t pt-2">
                 <div class="flex items-center space-x-2">
                     <button type="button" data-modal-target="reference-modal-{{ $pro->id }}" data-modal-toggle="reference-modal-{{ $pro->id }}" class="flex items-center text-blue-600 hover:underline">
@@ -183,7 +183,7 @@
                     </button>
                 </div>
             </div>
-            <div class="text-gray-900 mb-4">{{ $con->content }}</div>
+            <a href="{{ url('/post/' . $con->id) }}" class="text-gray-900 mb-4 block hover:text-blue-700">{{ $con->content }}</a>
             <div class="flex items-center justify-between text-xs text-gray-500 border-t pt-2">
                 <div class="flex items-center space-x-2">
                     <button type="button" data-modal-target="reference-modal-{{ $con->id }}" data-modal-toggle="reference-modal-{{ $con->id }}" class="flex items-center text-blue-600 hover:underline">

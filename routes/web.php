@@ -45,18 +45,18 @@ Route::get('/post/{post}', function (Post $post, Request $request) {
     // Record the view
     $viewService = new \App\Services\ViewService();
     $viewService->recordView($post, $request);
-    
+
     $pros = $post->pros;
     $cons = $post->cons;
     $categories = \App\Models\Category::all();
-    
+
     // Get view count
     $viewCount = $viewService->getViewCount($post);
-    
+
     return view('points', [
-        'post' => $post, 
-        'pros' => $pros, 
-        'cons' => $cons, 
+        'post' => $post,
+        'pros' => $pros,
+        'cons' => $cons,
         'categories' => $categories,
         'viewCount' => $viewCount
     ]);
@@ -115,8 +115,14 @@ if (app()->environment('local')) {
         // Get the original category objects with post counts
         $categoryData = Category::withCount('posts')->get();
 
+        // Initialize view service to calculate views for each category
+        $viewService = new \App\Services\ViewService();
+
         // Process categories for the presentation view
-        $categoriesForView = $categoryData->map(function ($category) {
+        $categoriesForView = $categoryData->map(function ($category) use ($viewService) {
+            // Calculate total views for this category
+            $viewCount = $viewService->getCategoryViewCount($category);
+
             return [
                 'id' => $category->id, // Include the ID
                 'name' => $category->name,
@@ -124,6 +130,7 @@ if (app()->environment('local')) {
                 'bg_color' => 'bg-gray-600', // Default background color
                 'description' => $category->description ?? 'No description available.',
                 'discussions_count' => $category->posts_count,
+                'view_count' => $viewCount, // Add view count
                 'weekly_posts' => rand(1, 20), // Replace with actual logic if you track weekly posts
                 'top_writers' => [
                     ['initials' => 'AB', 'bg' => 'bg-blue-100', 'text' => 'text-blue-600'],
@@ -207,7 +214,7 @@ if (app()->environment('local')) {
         ]);
     })->name('presentation.writers');
 
-    Route::get('/presentation/category/{category}', function ($category) {
+    Route::get('/presentation/category/{category}', function ($category, Request $request) {
         // Try to find the category by ID first, then by name if that fails
         $categoryModel = Category::find($category);
 
@@ -218,7 +225,13 @@ if (app()->environment('local')) {
 
         if (!$categoryModel) {
             abort(404);
-        }        // Get posts from this category
+        }
+
+        // Get category view count
+        $viewService = new \App\Services\ViewService();
+        $categoryViewCount = $viewService->getCategoryViewCount($categoryModel);
+
+        // Get posts from this category
         $dbPosts = $categoryModel->posts()
             ->whereNull('parent_id')
             ->with(['user', 'categories', 'references', 'children'])
@@ -297,7 +310,8 @@ if (app()->environment('local')) {
         return view('presentation.category', [
             'category' => $category,
             'category_model' => $categoryModel,
-            'posts' => $posts
+            'posts' => $posts,
+            'viewCount' => $categoryViewCount
         ]);
     })->name('presentation.category');
 

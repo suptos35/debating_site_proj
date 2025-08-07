@@ -19,27 +19,20 @@ class ViewService
      */
     public function recordView(Post $post, Request $request): void
     {
-        // Get user ID if authenticated
-        $userId = Auth::check() ? Auth::id() : null;
+        // Get the writer ID (post author)
+        $writerId = $post->user_id;
         
-        // Get session ID
-        $sessionId = Session::getId();
-        
-        // Get IP address
-        $ipAddress = $request->ip();
-        
-        // Try to find existing view entry
+        if (!$writerId) {
+            // Skip if no writer ID (shouldn't happen)
+            return;
+        }
+
+        // Try to find existing view entry for this post/writer combination
         $view = View::firstOrNew([
             'post_id' => $post->id,
-            'session_id' => $sessionId,
-            'ip_address' => $ipAddress,
+            'writer_id' => $writerId,
         ]);
-        
-        // Associate user if authenticated
-        if ($userId) {
-            $view->user_id = $userId;
-        }
-        
+
         // If this is a new view entry, view_count will be set to default 1
         // If it's an existing entry, increment the view count
         if ($view->exists) {
@@ -49,7 +42,7 @@ class ViewService
             $view->save();
         }
     }
-    
+
     /**
      * Get the total view count for a post.
      *
@@ -59,5 +52,24 @@ class ViewService
     public function getViewCount(Post $post): int
     {
         return $post->views()->sum('view_count');
+    }
+
+    /**
+     * Get the total view count for a category.
+     *
+     * @param \App\Models\Category $category
+     * @return int
+     */
+    public function getCategoryViewCount(\App\Models\Category $category): int
+    {
+        // Get all posts in this category
+        $postIds = $category->posts()->pluck('posts.id')->toArray();
+
+        if (empty($postIds)) {
+            return 0;
+        }
+
+        // Sum the view counts of all posts in this category
+        return View::whereIn('post_id', $postIds)->sum('view_count');
     }
 }
