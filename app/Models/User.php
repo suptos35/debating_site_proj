@@ -70,4 +70,9 @@ public function pollVotes()
 {
     return $this->hasMany(PollVote::class);
 }
+
+public function views()
+{
+    return $this->hasMany(View::class);
+}
 }

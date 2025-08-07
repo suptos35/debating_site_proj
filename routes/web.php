@@ -41,11 +41,25 @@ Route::get('/index', function () {
 
 });
 
-Route::get('/post/{post}', function (Post $post) {
+Route::get('/post/{post}', function (Post $post, Request $request) {
+    // Record the view
+    $viewService = new \App\Services\ViewService();
+    $viewService->recordView($post, $request);
+    
     $pros = $post->pros;
     $cons = $post->cons;
     $categories = \App\Models\Category::all();
-    return view('points', ['post' => $post, 'pros' => $pros, 'cons' => $cons, 'categories' => $categories]);
+    
+    // Get view count
+    $viewCount = $viewService->getViewCount($post);
+    
+    return view('points', [
+        'post' => $post, 
+        'pros' => $pros, 
+        'cons' => $cons, 
+        'categories' => $categories,
+        'viewCount' => $viewCount
+    ]);
 });
 
 

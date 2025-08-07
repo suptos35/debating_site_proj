@@ -6,7 +6,7 @@
         <div class="text-sm text-gray-500">
             Started by <span class="font-semibold text-gray-700">{{ $post->user->name }}</span>
             • {{ \Carbon\Carbon::parse($post->created_at)->diffForHumans() }}
-            • <i class="fas fa-eye mr-1"></i> 123 views
+            • <i class="fas fa-eye mr-1"></i> {{ $viewCount ?? $post->viewCount() ?? 0 }} views
         </div>
         <button type="button" onclick="openReportModal('discussion-{{ $post->id }}')" class="text-red-500 hover:text-red-700 text-xs font-medium flex items-center">
             <i class="fas fa-flag mr-1"></i> Report

@@ -70,4 +70,17 @@ public function references()
     return $this->hasMany(Reference::class);
 }
 
+public function views()
+{
+    return $this->hasMany(View::class);
+}
+
+/**
+ * Get the total view count for this post.
+ */
+public function viewCount()
+{
+    return $this->views()->sum('view_count');
+}
+
 }
