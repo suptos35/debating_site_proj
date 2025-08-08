@@ -21,6 +21,7 @@ class User extends Authenticatable
         'email',
         'password',
         'role',
+        'description',
     ];
 
     /**
@@ -79,5 +80,85 @@ public function views()
 public function viewsAsWriter()
 {
     return $this->hasMany(View::class, 'writer_id');
+}
+
+/**
+ * Follow relationships
+ */
+public function follows()
+{
+    return $this->hasMany(Follow::class);
+}
+
+public function notifications()
+{
+    return $this->hasMany(Notification::class);
+}
+
+public function followers()
+{
+    return $this->morphMany(Follow::class, 'followable');
+}
+
+public function followedCategories()
+{
+    return $this->morphedByMany(Category::class, 'followable', 'follows');
+}
+
+public function followedUsers()
+{
+    return $this->morphedByMany(User::class, 'followable', 'follows');
+}
+
+/**
+ * Check if this user is following a given model.
+ */
+public function isFollowing($followable)
+{
+    return $this->follows()
+        ->where('followable_type', get_class($followable))
+        ->where('followable_id', $followable->id)
+        ->exists();
+}
+
+/**
+ * Follow a user or category.
+ */
+public function follow($followable)
+{
+    if (!$this->isFollowing($followable)) {
+        return $this->follows()->create([
+            'followable_type' => get_class($followable),
+            'followable_id' => $followable->id,
+        ]);
+    }
+    return false;
+}
+
+/**
+ * Unfollow a user or category.
+ */
+public function unfollow($followable)
+{
+    return $this->follows()
+        ->where('followable_type', get_class($followable))
+        ->where('followable_id', $followable->id)
+        ->delete();
+}
+
+/**
+ * Get count of unread notifications.
+ */
+public function getUnreadNotificationsCount()
+{
+    return $this->notifications()->where('is_read', false)->count();
+}
+
+/**
+ * Get followers count for this user.
+ */
+public function getFollowersCount()
+{
+    return $this->followers()->count();
 }
 }

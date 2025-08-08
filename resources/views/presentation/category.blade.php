@@ -32,8 +32,11 @@
                     </div>
                 </div>
                 <div>
-                    <button class="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors">
-                        <i class="fas fa-plus mr-2"></i> Follow Category
+                    <button id="followCategoryBtn" onclick="toggleFollow('category', {{ $category_model->id }}, this)"
+                            class="follow-btn bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                            data-following="{{ Auth::check() && Auth::user()->isFollowing($category_model) ? 'true' : 'false' }}">
+                        <i class="fas {{ Auth::check() && Auth::user()->isFollowing($category_model) ? 'fa-check' : 'fa-plus' }} mr-2"></i>
+                        <span class="follow-text">{{ Auth::check() && Auth::user()->isFollowing($category_model) ? 'Following' : 'Follow Category' }}</span>
                     </button>
                 </div>
             </div>
@@ -46,7 +49,7 @@
         <div class="mb-12">
             <div class="flex justify-between items-center mb-6">
                 <h2 class="text-2xl font-bold text-gray-900">{{ isset($category_model) ? $category_model->name : ucfirst($category) }} Discussions</h2>
-                <span class="text-sm text-gray-500">{{ $discussionsCount }} discussions • {{ number_format($viewCount) }} views</span>
+                <span class="text-sm text-gray-500">{{ $discussionsCount }} discussions • {{ number_format($viewCount) }} views • <span id="followersCount">{{ $category_model->getFollowersCount() }}</span> followers</span>
             </div>
 
             @if($discussionsCount > 0)
@@ -72,3 +75,65 @@
 
     <!-- Footer -->
     </x-main_layout>
+
+<script>
+function toggleFollow(type, id, button) {
+    @guest
+        alert('Please log in to follow categories and writers');
+        return;
+    @endguest
+
+    const isFollowing = button.dataset.following === 'true';
+    const method = isFollowing ? 'DELETE' : 'POST';
+    const url = `/follow/${type}/${id}`;
+
+    // Update button state immediately for better UX
+    const followText = button.querySelector('.follow-text');
+    const icon = button.querySelector('i');
+
+    // Disable button during request
+    button.disabled = true;
+    followText.textContent = isFollowing ? 'Unfollowing...' : 'Following...';
+
+    fetch(url, {
+        method: method,
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Update button state
+            if (isFollowing) {
+                followText.textContent = 'Follow Category';
+                icon.className = 'fas fa-plus mr-2';
+                button.className = 'follow-btn bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors';
+                button.dataset.following = 'false';
+            } else {
+                followText.textContent = 'Following';
+                icon.className = 'fas fa-check mr-2';
+                button.className = 'follow-btn bg-green-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-green-700 transition-colors';
+                button.dataset.following = 'true';
+            }
+
+            // Update follower count if element exists
+            const followerCounter = document.getElementById('followersCount');
+            if (followerCounter && data.followers_count !== undefined) {
+                followerCounter.textContent = data.followers_count;
+            }
+        } else {
+            alert(data.message || 'An error occurred. Please try again.');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred. Please try again.');
+    })
+    .finally(() => {
+        // Re-enable button
+        button.disabled = false;
+    });
+}
+</script>

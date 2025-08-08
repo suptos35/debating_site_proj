@@ -16,6 +16,7 @@ class LikeController extends Controller
         }
 
         $userId = Auth::id();
+        $user = Auth::user();
         $liked = $post->isLikedByUser($userId);
 
         if ($liked) {
@@ -28,6 +29,9 @@ class LikeController extends Controller
             $post->likes()->create(['user_id' => $userId]);
             $post->increment('like_count');
             $isLiked = true;
+
+            // Create notification for the post owner
+            app(\App\Services\NotificationService::class)->createLikeNotification($post, $user);
         }
 
         return response()->json([

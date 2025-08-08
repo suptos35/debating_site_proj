@@ -15,4 +15,20 @@ class Category extends Model
 {
     return $this->belongsToMany(Post::class, 'category_post');
 }
+
+/**
+ * Follow relationships
+ */
+public function followers()
+{
+    return $this->morphMany(Follow::class, 'followable');
+}
+
+/**
+ * Get followers count for this category.
+ */
+public function getFollowersCount()
+{
+    return $this->followers()->count();
+}
 }

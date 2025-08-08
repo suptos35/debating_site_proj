@@ -13,13 +13,27 @@
                     <div class="flex items-center space-x-6 mt-3 text-sm text-gray-500">
                         <span><i class="fas fa-file-alt mr-1"></i> {{ $writer['posts_count'] }} discussions</span>
                         <span><i class="fas fa-thumbs-up mr-1"></i> {{ $writer['total_likes'] }} likes</span>
+                        <span><i class="fas fa-users mr-1"></i> <span id="followersCount">{{ $user->getFollowersCount() }}</span> followers</span>
                         <span><i class="fas fa-calendar mr-1"></i> Joined {{ $writer['joined'] }}</span>
                     </div>
                 </div>
                 <div>
-                    <button class="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors">
-                        <i class="fas fa-plus mr-2"></i> Follow
-                    </button>
+                    @auth
+                        @if(Auth::id() !== $user->id)
+                            <button id="followUserBtn" onclick="toggleFollow('user', {{ $user->id }}, this)"
+                                    class="follow-btn bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                                    data-following="{{ Auth::user()->isFollowing($user) ? 'true' : 'false' }}">
+                                <i class="fas {{ Auth::user()->isFollowing($user) ? 'fa-check' : 'fa-plus' }} mr-2"></i>
+                                <span class="follow-text">{{ Auth::user()->isFollowing($user) ? 'Following' : 'Follow' }}</span>
+                            </button>
+                        @else
+                            <span class="text-gray-500 italic">This is your profile</span>
+                        @endif
+                    @else
+                        <button onclick="alert('Please log in to follow writers')" class="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors">
+                            <i class="fas fa-plus mr-2"></i> Follow
+                        </button>
+                    @endauth
                 </div>
             </div>
         </div>
@@ -54,3 +68,60 @@
 
     <!-- Footer -->
    </x-main_layout>
+
+<script>
+function toggleFollow(type, id, button) {
+    const isFollowing = button.dataset.following === 'true';
+    const method = isFollowing ? 'DELETE' : 'POST';
+    const url = `/follow/${type}/${id}`;
+
+    // Update button state immediately for better UX
+    const followText = button.querySelector('.follow-text');
+    const icon = button.querySelector('i');
+
+    // Disable button during request
+    button.disabled = true;
+    followText.textContent = isFollowing ? 'Unfollowing...' : 'Following...';
+
+    fetch(url, {
+        method: method,
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Update button state
+            if (isFollowing) {
+                followText.textContent = 'Follow';
+                icon.className = 'fas fa-plus mr-2';
+                button.className = 'follow-btn bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors';
+                button.dataset.following = 'false';
+            } else {
+                followText.textContent = 'Following';
+                icon.className = 'fas fa-check mr-2';
+                button.className = 'follow-btn bg-green-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-green-700 transition-colors';
+                button.dataset.following = 'true';
+            }
+
+            // Update follower count if element exists
+            const followerCounter = document.getElementById('followersCount');
+            if (followerCounter && data.followers_count !== undefined) {
+                followerCounter.textContent = data.followers_count;
+            }
+        } else {
+            alert(data.message || 'An error occurred. Please try again.');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred. Please try again.');
+    })
+    .finally(() => {
+        // Re-enable button
+        button.disabled = false;
+    });
+}
+</script>

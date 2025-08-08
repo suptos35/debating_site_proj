@@ -13,6 +13,10 @@ use App\Http\Controllers\LikeController;
 use App\Http\Controllers\ReferenceController;
 use App\Http\Controllers\PollController;
 use App\Http\Controllers\DevController;
+use App\Http\Controllers\FollowController;
+use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\FollowTestController;
+use Illuminate\Support\Facades\Auth;
 
 Route::get('/', [HomeController::class, 'index']);
 
@@ -97,6 +101,38 @@ Route::post('/polls', [PollController::class, 'store'])->middleware('auth')->nam
 Route::post('/polls/{poll}/vote', [PollController::class, 'vote'])->middleware('auth')->name('polls.vote');
 Route::delete('/polls/{poll}', [PollController::class, 'destroy'])->middleware('auth')->name('polls.destroy');
 
+// Follow and Notification routes
+Route::middleware('auth')->group(function () {
+    // Follow routes
+    Route::post('/follow/user/{user}', [FollowController::class, 'followUser'])->name('follow.user');
+    Route::delete('/follow/user/{user}', [FollowController::class, 'unfollowUser'])->name('unfollow.user');
+    Route::post('/follow/category/{category}', [FollowController::class, 'followCategory'])->name('follow.category');
+    Route::delete('/follow/category/{category}', [FollowController::class, 'unfollowCategory'])->name('unfollow.category');
+
+    // Get followed items
+    Route::get('/follow/categories', [FollowController::class, 'getFollowedCategories'])->name('follow.categories');
+    Route::get('/follow/users', [FollowController::class, 'getFollowedUsers'])->name('follow.users');
+
+    // Get followers
+    Route::get('/user/{user}/followers', [FollowController::class, 'getUserFollowers'])->name('user.followers');
+    Route::get('/category/{category}/followers', [FollowController::class, 'getCategoryFollowers'])->name('category.followers');
+
+    // Notification routes
+    Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::post('/notifications/{notification}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
+    Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.read-all');
+    Route::get('/notifications/count', [NotificationController::class, 'getUnreadCount'])->name('notifications.count');
+    Route::get('/notifications/recent', [NotificationController::class, 'getRecent'])->name('notifications.recent');
+    Route::delete('/notifications/{notification}', [NotificationController::class, 'destroy'])->name('notifications.destroy');
+});
+
+// Test routes for follow/notification functionality (remove in production)
+if (app()->environment('local')) {
+    Route::get('/test/follow', [FollowTestController::class, 'testFollow'])->name('test.follow');
+    Route::get('/test/notifications', [FollowTestController::class, 'testNotifications'])->name('test.notifications');
+    Route::get('/test/stats', [FollowTestController::class, 'getStats'])->name('test.stats');
+}
+
 // Development routes (only work in local environment)
 if (app()->environment('local')) {
     Route::get('/dev', [DevController::class, 'dashboard'])->name('dev.dashboard');
@@ -141,6 +177,7 @@ if (app()->environment('local')) {
                 'description' => $category->description ?? 'No description available.',
                 'discussions_count' => $category->posts_count, // Now only counts parent posts
                 'view_count' => $viewCount, // Add view count
+                'followers_count' => $category->getFollowersCount(), // Add follower count
                 'weekly_posts' => rand(1, 20), // Replace with actual logic if you track weekly posts
                 'top_writers' => [
                     ['initials' => 'AB', 'bg' => 'bg-blue-100', 'text' => 'text-blue-600'],
@@ -210,7 +247,7 @@ if (app()->environment('local')) {
                 'bio' => 'Contributor with expertise in various topics.', // Hardcoded bio
                 'posts_count' => $user->posts_count ?? 0,
                 'total_likes' => $user->posts_sum_like_count ?? 0,
-                'followers' => rand(50, 3000), // Random follower count for demo
+                'followers' => $user->getFollowersCount(), // Dynamic follower count
                 'specialties' => $specialties,
                 'last_active' => rand(1, 24) . ' hours ago', // Random last active time
                 'rating' => number_format(3.5 + (mt_rand(0, 15) / 10), 1) // Random rating between 3.5-5.0
@@ -408,7 +445,50 @@ if (app()->environment('local')) {
     })->name('presentation.writer');
 
     Route::get('/presentation/profile', function () {
-        return view('presentation.profile');
+        // Require authentication
+        if (!Auth::check()) {
+            return redirect()->route('login');
+        }
+
+        $user = Auth::user();
+
+        // Get followed categories
+        $followedCategories = $user->followedCategories()
+            ->withCount(['posts' => function($query) {
+                $query->whereNull('parent_id');
+            }])
+            ->get();
+
+        // Get followed users (writers)
+        $followedUsers = $user->followedUsers()
+            ->withCount(['posts' => function($query) {
+                $query->whereNull('parent_id');
+            }])
+            ->withSum('posts', 'like_count')
+            ->get();
+
+        // Get recent notifications for the user
+        $notifications = $user->notifications()
+            ->with([
+                'post' => function($query) {
+                    $query->with('parent');
+                },
+                'triggeredBy',
+                'notifiable'
+            ])
+            ->orderBy('created_at', 'desc')
+            ->limit(10)
+            ->get();
+
+        // Get all categories for the main layout component
+        $categories = Category::all();
+
+        return view('presentation.profile', [
+            'followedCategories' => $followedCategories,
+            'followedUsers' => $followedUsers,
+            'notifications' => $notifications,
+            'categories' => $categories
+        ]);
     })->name('presentation.profile');
 
     Route::get('/presentation/groups', function () {
@@ -427,6 +507,4 @@ if (app()->environment('local')) {
     Route::get('/presentation/polls', function () {
         return view('presentation.polls');
     })->name('presentation.polls');
-}
-
-require __DIR__.'/auth.php';
+}require __DIR__.'/auth.php';

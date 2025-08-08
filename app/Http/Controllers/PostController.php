@@ -32,6 +32,9 @@ class PostController extends Controller
         // Attach categories (if any were selected)
         if ($request->has('categories') && is_array($request->categories)) {
             $post->categories()->attach($request->categories);
+
+            // IMPORTANT: Trigger category notifications after attaching categories
+            $post->triggerCategoryNotifications($request->categories);
         }
 
         return redirect()->back()->with('success', 'Post created successfully!');
@@ -99,7 +102,19 @@ class PostController extends Controller
 
                 // Sync categories
                 if ($request->has('categories') && is_array($request->categories)) {
+                    // Get the old categories before syncing
+                    $oldCategoryIds = $post->categories->pluck('id')->toArray();
+
+                    // Sync categories
                     $post->categories()->sync($request->categories);
+
+                    // Get new categories that were added
+                    $newCategoryIds = array_diff($request->categories, $oldCategoryIds);
+
+                    // Trigger notifications for newly added categories
+                    if (!empty($newCategoryIds)) {
+                        $post->triggerCategoryNotifications($newCategoryIds);
+                    }
                 } else {
                     $post->categories()->detach();
                 }

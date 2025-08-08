@@ -18,7 +18,7 @@
                         </div>
                         <div>
                             <h3 class="text-lg font-semibold text-gray-900">{{ $category['name'] }}</h3>
-                            <p class="text-sm text-gray-500">{{ $category['discussions_count'] }} main discussions • {{ number_format($category['view_count']) }} views</p>
+                            <p class="text-sm text-gray-500">{{ $category['discussions_count'] }} discussions • {{ number_format($category['view_count']) }} views • {{ $category['followers_count'] }} followers</p>
                         </div>
                     </div>
                     <p class="text-gray-600 text-sm mb-4">{{ $category['description'] }}</p>
@@ -29,6 +29,9 @@
                             </span>
                             <span class="px-2 py-1 bg-gray-50 text-gray-600 rounded-full text-xs font-medium flex items-center">
                                 <i class="fas fa-eye mr-1 text-xs"></i> {{ number_format($category['view_count']) }}
+                            </span>
+                            <span class="px-2 py-1 bg-green-50 text-green-600 rounded-full text-xs font-medium flex items-center">
+                                <i class="fas fa-users mr-1 text-xs"></i> {{ $category['followers_count'] }}
                             </span>
                         </div>
                     </div>

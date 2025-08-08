@@ -15,10 +15,22 @@ class Post extends Model
         'content',
         'parent_id',
         'user_id',
+        'group_id',
         'type',
         'like_count',
         'image_url'
     ];
+
+    /**
+     * Boot method to handle model events.
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        // Note: Notifications are now handled by PostObserver
+        // Category notifications are handled separately when categories are attached
+    }
 
     public function parent()
     {
@@ -97,6 +109,16 @@ public function totalCommentCount()
     }
 
     return $count;
+}
+
+/**
+ * Trigger category notifications when categories are attached to this post.
+ * This should be called after attaching categories to ensure followers are notified.
+ */
+public function triggerCategoryNotifications($categoryIds = null)
+{
+    $notificationService = app(\App\Services\NotificationService::class);
+    $notificationService->createCategoryNotifications($this, $categoryIds);
 }
 
 }
