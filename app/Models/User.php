@@ -161,4 +161,32 @@ public function getFollowersCount()
 {
     return $this->followers()->count();
 }
+
+/**
+ * Check if user is admin.
+ */
+public function isAdmin()
+{
+    return $this->role === 'admin';
+}
+
+/**
+ * Check if user is regular user.
+ */
+public function isUser()
+{
+    return $this->role === 'user';
+}
+
+/**
+ * Get the user's role display name.
+ */
+public function getRoleDisplayName()
+{
+    return match($this->role) {
+        'admin' => 'Administrator',
+        'user' => 'User',
+        default => ucfirst($this->role)
+    };
+}
 }

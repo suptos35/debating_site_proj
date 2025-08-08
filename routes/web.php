@@ -5,6 +5,8 @@ use Illuminate\Support\Facades\Route;
 use App\Models\Post;
 use App\Models\Category;
 use App\Models\User;
+use App\Models\Poll;
+use App\Models\Report;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Http\Request;
 use App\Http\Controllers\HomeController;
@@ -101,6 +103,11 @@ Route::post('/polls', [PollController::class, 'store'])->middleware('auth')->nam
 Route::post('/polls/{poll}/vote', [PollController::class, 'vote'])->middleware('auth')->name('polls.vote');
 Route::delete('/polls/{poll}', [PollController::class, 'destroy'])->middleware('auth')->name('polls.destroy');
 
+// Report routes
+Route::post('/report/content', [\App\Http\Controllers\ReportController::class, 'reportContent'])->middleware('auth')->name('report.content');
+Route::get('/admin/report/details', [\App\Http\Controllers\ReportController::class, 'getReportDetails'])->middleware('auth')->name('admin.report.details');
+Route::post('/admin/report/resolve', [\App\Http\Controllers\ReportController::class, 'resolveReport'])->middleware('auth')->name('admin.report.resolve');
+
 // Follow and Notification routes
 Route::middleware('auth')->group(function () {
     // Follow routes
@@ -143,6 +150,19 @@ if (app()->environment('local')) {
     Route::post('/dev/create-poll', [DevController::class, 'createPoll'])->name('dev.create-poll');
     Route::post('/dev/reset-data', [DevController::class, 'resetData'])->name('dev.reset-data');
     Route::post('/dev/logout', [DevController::class, 'logout'])->name('dev.logout');
+
+    // Quick route to make current user admin (development only)
+    Route::get('/dev/make-admin', function () {
+        if (!Auth::check()) {
+            return 'Please log in first';
+        }
+
+        $user = Auth::user();
+        $user->role = 'admin';
+        $user->save();
+
+        return 'User ' . $user->name . ' is now an admin. Role: ' . $user->role;
+    })->name('dev.make-admin');
 }
 
 // Presentation routes for UI mockups (only for local environment)
@@ -496,15 +516,396 @@ if (app()->environment('local')) {
     })->name('presentation.groups');
 
     Route::get('/presentation/admin', function () {
-        return view('presentation.admin');
+        // Check if user is authenticated and is admin
+        if (!Auth::check() || !Auth::user()->isAdmin()) {
+            abort(403, 'Access denied. Admin privileges required.');
+        }
+
+        // Get dynamic statistics
+        $totalUsers = User::count();
+        $activeDiscussions = Post::whereNull('parent_id')->count();
+        $totalCategories = Category::count();
+        $activePolls = Poll::where('is_active', true)->count();
+
+        // Get pending reports count and recent reports
+        $pendingReports = Report::where('status', 'pending')->count();
+
+        // Check total unique reported content
+        $totalUniqueReports = \App\Models\Report::where('status', 'pending')
+            ->select('reportable_type', 'reportable_id')
+            ->groupBy('reportable_type', 'reportable_id')
+            ->get()
+            ->count();
+
+        // Get recent reports grouped by content (to show unique content with report counts)
+        $recentReports = \App\Models\Report::with(['reportable'])
+            ->where('status', 'pending')
+            ->select('reportable_type', 'reportable_id')
+            ->selectRaw('MIN(id) as first_report_id, COUNT(*) as report_count, MIN(created_at) as first_reported_at')
+            ->groupBy('reportable_type', 'reportable_id')
+            ->orderBy('first_reported_at', 'desc')
+            ->limit(5)
+            ->get()
+            ->map(function($reportGroup) {
+                // Get the first report for additional details with proper relationships
+                $relationships = ['reportable'];
+                if ($reportGroup->reportable_type === 'App\Models\Post') {
+                    $relationships[] = 'reportable.user';
+                    $relationships[] = 'reportable.parent';
+                } elseif ($reportGroup->reportable_type === 'App\Models\Reference') {
+                    $relationships[] = 'reportable.post.user';
+                }
+
+                $firstReport = \App\Models\Report::with($relationships)->find($reportGroup->first_report_id);
+
+                // Get reason summary for this content
+                $reasonSummary = \App\Models\Report::getReportSummary($reportGroup->reportable_type, $reportGroup->reportable_id);
+
+                return [
+                    'reportable_type' => $reportGroup->reportable_type,
+                    'reportable_id' => $reportGroup->reportable_id,
+                    'report_count' => $reportGroup->report_count,
+                    'first_reported_at' => $reportGroup->first_reported_at,
+                    'first_reporter' => \App\Models\User::find($firstReport->user_id),
+                    'reportable' => $firstReport->reportable,
+                    'reason_summary' => $reasonSummary
+                ];
+            });
+
+        // Check if there are more reports to load
+        $hasMoreReports = $totalUniqueReports > 5;        // Get all categories for the main layout component
+        $categories = Category::all();
+
+        return view('presentation.admin', [
+            'totalUsers' => $totalUsers,
+            'activeDiscussions' => $activeDiscussions,
+            'totalCategories' => $totalCategories,
+            'activePolls' => $activePolls,
+            'pendingReports' => $pendingReports,
+            'recentReports' => $recentReports,
+            'hasMoreReports' => $hasMoreReports,
+            'categories' => $categories
+        ]);
     })->name('presentation.admin');
 
+    // Admin route to create category
+    Route::post('/presentation/admin/categories', function (Request $request) {
+        // Check if user is authenticated and is admin
+        if (!Auth::check() || !Auth::user()->isAdmin()) {
+            abort(403, 'Access denied. Admin privileges required.');
+        }
+
+        $request->validate([
+            'name' => 'required|string|max:255|unique:categories,name',
+            'description' => 'nullable|string|max:1000'
+        ]);
+
+        $category = Category::create([
+            'name' => $request->name,
+            'description' => $request->description
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Category created successfully!',
+            'category' => $category
+        ]);
+    })->name('admin.categories.store');
+
+    // Admin route to search users
+    Route::get('/presentation/admin/users/search', function (Request $request) {
+        // Check if user is authenticated and is admin
+        if (!Auth::check() || !Auth::user()->isAdmin()) {
+            abort(403, 'Access denied. Admin privileges required.');
+        }
+
+        $search = $request->get('search', '');
+
+        $users = User::where('name', 'LIKE', "%{$search}%")
+            ->orWhere('email', 'LIKE', "%{$search}%")
+            ->orWhere('username', 'LIKE', "%{$search}%")
+            ->withCount(['posts' => function($query) {
+                $query->whereNull('parent_id');
+            }])
+            ->orderBy('created_at', 'desc')
+            ->limit(20)
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'users' => $users->map(function($user) {
+                return [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'username' => $user->username,
+                    'role' => $user->role ?? 'user',
+                    'posts_count' => $user->posts_count,
+                    'created_at' => $user->created_at->format('M d, Y'),
+                    'email_verified_at' => $user->email_verified_at ? 'Verified' : 'Not Verified'
+                ];
+            })
+        ]);
+    })->name('admin.users.search');
+
+    // Admin route to delete user
+    Route::delete('/presentation/admin/users/{user}', function (User $user) {
+        // Check if user is authenticated and is admin
+        if (!Auth::check() || !Auth::user()->isAdmin()) {
+            abort(403, 'Access denied. Admin privileges required.');
+        }
+
+        // Prevent deleting the current admin user
+        if ($user->id === Auth::id()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You cannot delete your own account.'
+            ], 403);
+        }
+
+        // Delete the user (this will cascade delete related posts, likes, etc.)
+        $user->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'User deleted successfully!'
+        ]);
+    })->name('admin.users.delete');
+
+    // Admin route to search posts
+    Route::get('/presentation/admin/posts/search', function (Request $request) {
+        // Check if user is authenticated and is admin
+        if (!Auth::check() || !Auth::user()->isAdmin()) {
+            abort(403, 'Access denied. Admin privileges required.');
+        }
+
+        $search = $request->get('search', '');
+
+        $posts = Post::where('title', 'LIKE', "%{$search}%")
+            ->orWhere('content', 'LIKE', "%{$search}%")
+            ->with(['user', 'categories'])
+            ->withCount(['children', 'likes'])
+            ->orderBy('created_at', 'desc')
+            ->limit(20)
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'posts' => $posts->map(function($post) {
+                return [
+                    'id' => $post->id,
+                    'title' => $post->title,
+                    'content' => substr(strip_tags($post->content), 0, 150) . '...',
+                    'type' => $post->parent_id ? 'Argument' : 'Discussion',
+                    'user' => [
+                        'id' => $post->user->id,
+                        'name' => $post->user->name,
+                        'email' => $post->user->email
+                    ],
+                    'categories' => $post->categories->pluck('name')->toArray(),
+                    'comments_count' => $post->children_count,
+                    'likes_count' => $post->likes_count,
+                    'created_at' => $post->created_at->format('M d, Y H:i')
+                ];
+            })
+        ]);
+    })->name('admin.posts.search');
+
+    // Debug route to view reports data
+    Route::get('/debug/reports', function () {
+        $reports = Report::with(['reportable'])->get();
+
+        return response()->json([
+            'total_reports' => $reports->count(),
+            'post_reports' => $reports->where('reportable_type', 'App\Models\Post')->count(),
+            'reference_reports' => $reports->where('reportable_type', 'App\Models\Reference')->count(),
+            'reports' => $reports->map(function($report) {
+                return [
+                    'id' => $report->id,
+                    'reportable_type' => $report->reportable_type,
+                    'reportable_id' => $report->reportable_id,
+                    'reason' => $report->reason,
+                    'status' => $report->status,
+                    'created_at' => $report->created_at->format('Y-m-d H:i:s'),
+                    'reportable' => $report->reportable ? [
+                        'id' => $report->reportable->id,
+                        'content' => $report->reportable_type === 'App\Models\Post'
+                            ? substr($report->reportable->content ?? '', 0, 100) . '...'
+                            : ($report->reportable->url ?? 'N/A'),
+                    ] : null
+                ];
+            })
+        ]);
+    })->name('debug.reports');
+
+    // Test route for report review functionality
+    Route::get('/debug/test-review/{type}/{id}', function ($type, $id) {
+        $reportController = new \App\Http\Controllers\ReportController();
+
+        $request = new \Illuminate\Http\Request();
+        $request->merge(['type' => $type, 'id' => $id]);
+
+        return $reportController->getReportDetails($request);
+    })->name('debug.test-review');
+
+    // Debug route to test report submission
+    Route::post('/debug/test-report', function (Request $request) {
+        return response()->json([
+            'success' => true,
+            'message' => 'Test report endpoint working',
+            'received_data' => $request->all()
+        ]);
+    })->name('debug.test-report');    // Admin route to delete post
+    Route::delete('/presentation/admin/posts/{post}', function (Post $post) {
+        // Check if user is authenticated and is admin
+        if (!Auth::check() || !Auth::user()->isAdmin()) {
+            abort(403, 'Access denied. Admin privileges required.');
+        }
+
+        // Delete the post (this will cascade delete related comments, likes, etc.)
+        $post->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Post deleted successfully!'
+        ]);
+    })->name('admin.posts.delete');
+
+    // Admin route to load more reports
+    Route::get('/presentation/admin/reports/load-more', function () {
+        // Check if user is authenticated and is admin
+        if (!Auth::check() || Auth::user()->role !== 'admin') {
+            abort(403, 'Access denied. Admin privileges required.');
+        }
+
+        // Get ALL reports grouped by content (no limit, no skip - show everything)
+        $allReports = \App\Models\Report::with(['reportable'])
+            ->where('status', 'pending')
+            ->select('reportable_type', 'reportable_id')
+            ->selectRaw('MIN(id) as first_report_id, COUNT(*) as report_count, MIN(created_at) as first_reported_at')
+            ->groupBy('reportable_type', 'reportable_id')
+            ->orderBy('first_reported_at', 'desc')
+            ->get() // Get ALL reports, no skip, no limit
+            ->map(function($reportGroup) {
+                // Get the first report for additional details with proper relationships
+                $relationships = ['reportable'];
+                if ($reportGroup->reportable_type === 'App\Models\Post') {
+                    $relationships[] = 'reportable.user';
+                    $relationships[] = 'reportable.parent';
+                } elseif ($reportGroup->reportable_type === 'App\Models\Reference') {
+                    $relationships[] = 'reportable.post.user';
+                }
+
+                $firstReport = \App\Models\Report::with($relationships)->find($reportGroup->first_report_id);
+
+                // Get reason summary for this content
+                $reasonSummary = \App\Models\Report::getReportSummary($reportGroup->reportable_type, $reportGroup->reportable_id);
+
+                return [
+                    'reportable_type' => $reportGroup->reportable_type,
+                    'reportable_id' => $reportGroup->reportable_id,
+                    'report_count' => $reportGroup->report_count,
+                    'first_reported_at' => $reportGroup->first_reported_at,
+                    'first_reporter' => \App\Models\User::find($firstReport->user_id),
+                    'reportable' => $firstReport->reportable,
+                    'reason_summary' => $reasonSummary
+                ];
+            });
+
+        return response()->json([
+            'success' => true,
+            'reports' => $allReports
+        ]);
+    })->name('admin.reports.load-more');
+
     Route::get('/presentation/search', function () {
-        $keyword = request('q', 'climate'); // Default to 'climate' if no search query
-        return view('presentation.search', compact('keyword'));
+        $keyword = request('q', '');
+
+        // Search posts (discussions only, not arguments)
+        $posts = collect();
+        $categories = collect();
+        $writers = collect();
+        $polls = collect();
+
+        if (!empty($keyword)) {
+            // Search posts
+            $posts = Post::whereNull('parent_id')
+                ->where(function($query) use ($keyword) {
+                    $query->where('title', 'LIKE', "%{$keyword}%")
+                          ->orWhere('content', 'LIKE', "%{$keyword}%")
+                          ->orWhere('excerpt', 'LIKE', "%{$keyword}%");
+                })
+                ->with(['categories', 'user'])
+                ->orderBy('created_at', 'desc')
+                ->take(10)
+                ->get();
+
+            // Search categories
+            $categories = Category::where('name', 'LIKE', "%{$keyword}%")
+                ->orWhere('description', 'LIKE', "%{$keyword}%")
+                ->withCount(['posts' => function($query) {
+                    $query->whereNull('parent_id'); // Only count discussions, not arguments
+                }])
+                ->take(10)
+                ->get();
+
+            // Search writers/users
+            $writers = User::where('name', 'LIKE', "%{$keyword}%")
+                ->orWhere('email', 'LIKE', "%{$keyword}%")
+                ->withCount(['posts' => function($query) {
+                    $query->whereNull('parent_id'); // Only count discussions
+                }])
+                ->take(10)
+                ->get();
+
+            // Search polls
+            $polls = Poll::where('title', 'LIKE', "%{$keyword}%")
+                ->orWhere('description', 'LIKE', "%{$keyword}%")
+                ->with(['options'])
+                ->where('is_active', true)
+                ->take(10)
+                ->get();
+        }
+
+        // Get all categories for the main layout component
+        $allCategories = Category::all();
+
+        return view('presentation.search', compact('keyword', 'posts', 'categories', 'writers', 'polls', 'allCategories'));
     })->name('presentation.search');
 
     Route::get('/presentation/polls', function () {
         return view('presentation.polls');
     })->name('presentation.polls');
+
+    // New routes for discussions and polls
+    Route::get('/presentation/discussions', function () {
+        // Get all posts with their categories and user information
+        $posts = Post::whereNull('parent_id')
+            ->with(['categories', 'user'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        // Get all categories for the main_layout component
+        $categories = Category::all();
+
+        return view('presentation.discussions', [
+            'posts' => $posts,
+            'categories' => $categories
+        ]);
+    })->name('presentation.discussions');
+
+    Route::get('/presentation/all-polls', function () {
+        // Get all polls with their options and user information
+        $polls = Poll::with(['user', 'options'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        // Get all categories for the main_layout component
+        $categories = Category::all();
+
+        return view('presentation.all-polls', [
+            'polls' => $polls,
+            'categories' => $categories
+        ]);
+    })->name('presentation.all-polls');
 }require __DIR__.'/auth.php';

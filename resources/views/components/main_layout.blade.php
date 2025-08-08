@@ -15,6 +15,8 @@
         .card-hover { transition: all 0.3s ease; }
         .card-hover:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.15); }
         .glass-effect { backdrop-filter: blur(10px); background: rgba(255, 255, 255, 0.9); }
+        /* Prevent Alpine.js elements from showing before initialization */
+        [x-cloak] { display: none !important; }
     </style>
 </head>
 <body class="bg-gray-50 min-h-screen flex flex-col">
@@ -35,7 +37,7 @@
                     <a href="/" class="text-blue-600 border-b-2 border-blue-600 px-3 py-2 text-sm font-medium">
                         Home
                     </a>
-                    <a href="#" class="text-gray-500 hover:text-gray-700 px-3 py-2 text-sm font-medium border-b-2 border-transparent hover:border-gray-300">
+                    <a href="/presentation/discussions" class="text-gray-500 hover:text-gray-700 px-3 py-2 text-sm font-medium border-b-2 border-transparent hover:border-gray-300">
                         Discussions
                     </a>
                     <a href="/presentation/categories" class="text-gray-500 hover:text-gray-700 px-3 py-2 text-sm font-medium border-b-2 border-transparent hover:border-gray-300">
@@ -47,7 +49,7 @@
                     {{-- <a href="/presentation/groups" class="text-gray-500 hover:text-gray-700 px-3 py-2 text-sm font-medium border-b-2 border-transparent hover:border-gray-300">
                         Groups
                     </a> --}}
-                    <a href="#" class="text-gray-500 hover:text-gray-700 px-3 py-2 text-sm font-medium border-b-2 border-transparent hover:border-gray-300">
+                    <a href="/presentation/all-polls" class="text-gray-500 hover:text-gray-700 px-3 py-2 text-sm font-medium border-b-2 border-transparent hover:border-gray-300">
                         Polls
                     </a>
                 </div>
@@ -68,12 +70,18 @@
                                 <span class="text-blue-600 text-xs font-medium">{{ strtoupper(substr(Auth::user()->name, 0, 2)) }}</span>
                             </div>
                             <span class="text-sm text-gray-700 hidden sm:block">{{ Auth::user()->name }}</span>
-                            <div class="relative group">
-                                <button class="text-gray-500 hover:text-gray-700">
+                            <div class="relative" x-data="{ open: false }">
+                                <button @click="open = !open" class="text-gray-500 hover:text-gray-700 focus:outline-none">
                                     <i class="fas fa-chevron-down text-xs"></i>
                                 </button>
-                                <div class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 hidden group-hover:block">
-                                    <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Profile</a>
+                                <div x-show="open" @click.away="open = false" x-transition x-cloak
+                                     class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
+                                    <a href="/presentation/profile" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Profile</a>
+                                    @if(Auth::user()->isAdmin())
+                                        <a href="/presentation/admin" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                            <i class="fas fa-shield-alt mr-2"></i>Admin Dashboard
+                                        </a>
+                                    @endif
                                     <a href="{{ route('logout') }}"
                                        onclick="event.preventDefault(); document.getElementById('logout-form').submit();"
                                        class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Logout</a>
@@ -154,7 +162,7 @@
                         </div>
                         <div class="mb-6">
                             <label for="categories" class="block mb-2 text-sm font-medium text-gray-900 dark:text-blue-800">Categories</label>
-                            <select id="categories" name="categories[]" multiple class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-white dark:border-gray-300 dark:placeholder-blue-400 dark:text-blue-800 dark:focus:ring-blue-500 dark:focus:border-blue-500">
+                                                        <select id="categories" name="categories[]" multiple class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-white dark:border-gray-300 dark:placeholder-blue-400 dark:text-blue-800 dark:focus:ring-blue-500 dark:focus:border-blue-500">
                                 @foreach($categories as $category)
                                     <option value="{{ $category->id }}">{{ $category->name }}</option>
                                 @endforeach
@@ -323,5 +331,118 @@
         });
     })();
     </script>
+
+    <!-- Report Modal (shared for all report actions) -->
+    <div id="reportModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-xl shadow-xl max-w-md w-full">
+                <div class="p-6">
+                    <div id="reportContext" class="mb-4 text-gray-700 font-semibold flex items-center">
+                        <i class="fas fa-flag text-red-500 mr-2"></i>Reporting: <span id="reportTarget">Content</span>
+                    </div>
+                    <form onsubmit="submitReport(); return false;">
+                        <label for="reportReason" class="block mb-2 text-sm font-medium text-gray-900">Reason</label>
+                        <select id="reportReason" class="w-full mb-4 p-2 border rounded">
+                            <option value="spam">Spam</option>
+                            <option value="abuse">Abusive Content</option>
+                            <option value="misinfo">Misinformation</option>
+                            <option value="irrelevant">Irrelevant Content</option>
+                            <option value="contradiction">Contradiction</option>
+                            <option value="other">Other</option>
+                        </select>
+                        <div class="flex justify-end space-x-2">
+                            <button type="button" onclick="closeReportModal()" class="bg-gray-200 text-gray-700 px-4 py-2 rounded hover:bg-gray-300">Cancel</button>
+                            <button type="submit" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">Submit Report</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentReportTarget = null;
+
+        function openReportModal(targetId) {
+            currentReportTarget = targetId;
+            document.getElementById('reportModal').classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+            document.getElementById('reportTarget').textContent = targetId.replace(/[-_]/g, ' ');
+        }
+
+        function closeReportModal() {
+            document.getElementById('reportModal').classList.add('hidden');
+            document.body.style.overflow = 'auto';
+            currentReportTarget = null;
+        }
+
+        function submitReport() {
+            if (!currentReportTarget) return;
+
+            const reason = document.getElementById('reportReason').value;
+
+            // Parse the target to determine type and ID
+            let reportableType, reportableId;
+
+            if (currentReportTarget.includes('post-')) {
+                reportableType = 'App\\Models\\Post';
+                reportableId = currentReportTarget.replace('post-', '');
+            } else if (currentReportTarget.includes('discussion-')) {
+                reportableType = 'App\\Models\\Post';
+                reportableId = currentReportTarget.replace('discussion-', '');
+            } else if (currentReportTarget.includes('argument-pro-') || currentReportTarget.includes('argument-con-')) {
+                reportableType = 'App\\Models\\Post';
+                reportableId = currentReportTarget.replace('argument-pro-', '').replace('argument-con-', '');
+            } else if (currentReportTarget.includes('reference-')) {
+                reportableType = 'App\\Models\\Reference';
+                reportableId = currentReportTarget.replace('reference-', '');
+            }
+
+            fetch('/report/content', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({
+                    reportable_type: reportableType,
+                    reportable_id: reportableId,
+                    reason: reason
+                })
+            })
+            .then(response => {
+                // Handle authentication redirects
+                if (response.status === 401 || response.status === 419) {
+                    alert('Please log in to report content.');
+                    closeReportModal();
+                    return;
+                }
+
+                // For successful responses (200-299), parse JSON
+                if (response.ok) {
+                    return response.json();
+                }
+
+                // For other error responses, throw error
+                throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+            })
+            .then(data => {
+                // Only process data if we actually got some (not from auth redirect)
+                if (data && data.success === true) {
+                    alert('Report submitted successfully!');
+                }
+                // Silently handle errors - no alert for failed submissions
+            })
+            .catch(error => {
+                console.error('Report submission error:', error);
+                // Silently handle errors - no alert for failed submissions
+            })
+            .finally(() => {
+                closeReportModal();
+            });
+        }
+    </script>
+
 </body>
 </html>

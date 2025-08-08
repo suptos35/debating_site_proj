@@ -4,7 +4,7 @@
         <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
             <!-- Search Field in Top Right -->
             <div class="flex justify-end mb-8">
-                <form action="/search" method="GET" class="relative">
+                <form action="{{ route('presentation.search') }}" method="GET" class="relative">
                     <input type="text" name="q" placeholder="Search discussions..." class="w-80 px-4 py-2 pr-10 text-sm border border-white/20 bg-white/10 text-white placeholder-white/70 rounded-lg focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-transparent backdrop-blur-sm">
                     <button type="submit" class="absolute inset-y-0 right-0 flex items-center pr-3">
                         <i class="fas fa-search text-white/70 hover:text-white cursor-pointer"></i>

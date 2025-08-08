@@ -111,16 +111,22 @@
                                             @endif
                                         </div>
                                     </div>
-                                    @auth
-                                        @if(Auth::id() === $pro->user_id)
-                                            <!-- Delete button -->
-                                            <form action="{{ route('references.delete', $reference) }}" method="POST" onsubmit="return confirm('Delete this reference?');">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="text-red-600 text-xs ml-2">Delete</button>
-                                            </form>
-                                        @endif
-                                    @endauth
+                                    <div class="flex items-center space-x-2">
+                                        @auth
+                                            @if(Auth::id() === $pro->user_id)
+                                                <!-- Delete button -->
+                                                <form action="{{ route('references.delete', $reference) }}" method="POST" onsubmit="return confirm('Delete this reference?');">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="text-red-600 text-xs ml-2">Delete</button>
+                                                </form>
+                                            @endif
+                                        @endauth
+                                        <!-- Report button for reference -->
+                                        <button type="button" onclick="openReportModal('reference-{{ $reference->id }}')" class="text-red-500 hover:text-red-700 text-xs font-medium flex items-center ml-2">
+                                            <i class="fas fa-flag"></i>
+                                        </button>
+                                    </div>
                                 </div>
                             @empty
                                 <div class="text-gray-400">No references yet.</div>
@@ -238,16 +244,22 @@
                                             @endif
                                         </div>
                                     </div>
-                                    @auth
-                                        @if(Auth::id() === $con->user_id)
-                                            <!-- Delete button -->
-                                            <form action="{{ route('references.delete', $reference) }}" method="POST" onsubmit="return confirm('Delete this reference?');">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="text-red-600 text-xs ml-2">Delete</button>
-                                            </form>
-                                        @endif
-                                    @endauth
+                                    <div class="flex items-center space-x-2">
+                                        @auth
+                                            @if(Auth::id() === $con->user_id)
+                                                <!-- Delete button -->
+                                                <form action="{{ route('references.delete', $reference) }}" method="POST" onsubmit="return confirm('Delete this reference?');">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="text-red-600 text-xs ml-2">Delete</button>
+                                                </form>
+                                            @endif
+                                        @endauth
+                                        <!-- Report button for reference -->
+                                        <button type="button" onclick="openReportModal('reference-{{ $reference->id }}')" class="text-red-500 hover:text-red-700 text-xs font-medium flex items-center ml-2">
+                                            <i class="fas fa-flag"></i>
+                                        </button>
+                                    </div>
                                 </div>
                             @empty
                                 <div class="text-gray-400">No references yet.</div>
@@ -351,10 +363,12 @@
                         <option value="spam">Spam</option>
                         <option value="abuse">Abusive Content</option>
                         <option value="misinfo">Misinformation</option>
+                        <option value="irrelevant">Irrelevant Content</option>
+                        <option value="contradiction">Contradiction</option>
                         <option value="other">Other</option>
                     </select>
-                    <label for="reportDetails" class="block mb-2 text-sm font-medium text-gray-900">Details (optional)</label>
-                    <textarea id="reportDetails" class="w-full mb-4 p-2 border rounded" rows="3"></textarea>
+                    {{-- <label for="reportDetails" class="block mb-2 text-sm font-medium text-gray-900">Details (optional)</label>
+                    <textarea id="reportDetails" class="w-full mb-4 p-2 border rounded" rows="3"></textarea> --}}
                     <div class="flex justify-end space-x-2">
                         <button type="button" onclick="closeReportModal()" class="bg-gray-200 text-gray-700 px-4 py-2 rounded hover:bg-gray-300">Cancel</button>
                         <button type="submit" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">Submit Report</button>
@@ -382,8 +396,67 @@
     }
 
     function submitReport() {
-        closeReportModal();
-        alert('Report submitted!');
+        if (!currentReportTarget) return;
+
+        const reason = document.getElementById('reportReason').value;
+
+        // Parse the target to determine type and ID
+        let reportableType, reportableId;
+
+        if (currentReportTarget.includes('discussion-')) {
+            reportableType = 'App\\Models\\Post';
+            reportableId = currentReportTarget.replace('discussion-', '');
+        } else if (currentReportTarget.includes('argument-pro-') || currentReportTarget.includes('argument-con-')) {
+            reportableType = 'App\\Models\\Post';
+            reportableId = currentReportTarget.replace('argument-pro-', '').replace('argument-con-', '');
+        } else if (currentReportTarget.includes('reference-')) {
+            reportableType = 'App\\Models\\Reference';
+            reportableId = currentReportTarget.replace('reference-', '');
+        }
+
+        fetch('/report/content', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+                reportable_type: reportableType,
+                reportable_id: reportableId,
+                reason: reason
+            })
+        })
+        .then(response => {
+            // Handle authentication redirects
+            if (response.status === 401 || response.status === 419) {
+                alert('Please log in to report content.');
+                closeReportModal();
+                return;
+            }
+
+            // For successful responses (200-299), parse JSON
+            if (response.ok) {
+                return response.json();
+            }
+
+            // For other error responses, throw error
+            throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+        })
+        .then(data => {
+            // Only process data if we actually got some (not from auth redirect)
+            if (data && data.success === true) {
+                alert('Report submitted successfully!');
+            }
+            // Silently handle errors - no alert for failed submissions
+        })
+        .catch(error => {
+            console.error('Report submission error:', error);
+            // Silently handle errors - no alert for failed submissions
+        })
+        .finally(() => {
+            closeReportModal();
+        });
     }
 
     document.addEventListener('DOMContentLoaded', function() {

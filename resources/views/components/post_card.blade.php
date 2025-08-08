@@ -46,6 +46,14 @@
                         <i class="fas fa-comments mr-1"></i>
                         {{ $post->totalCommentCount() }}
                     </span>
+                    <!-- Report button for authenticated users -->
+                    @auth
+                        <span class="flex items-center text-gray-400 hover:text-red-600 cursor-pointer transition-colors"
+                              onclick="event.stopPropagation(); openReportModal('post', {{ $post->id }})"
+                              title="Report this post">
+                            <i class="fas fa-flag mr-1"></i>
+                        </span>
+                    @endauth
                     <!-- Edit/Delete buttons for post owner -->
                     @auth
                         @if(Auth::id() === $post->user_id && $post->parent_id === null)
@@ -160,6 +168,14 @@
                                 <span class="flex items-center">
                                     <i class="fas fa-comments mr-1 text-blue-600"></i> {{ $post->totalCommentCount() }}
                                 </span>
+                                <!-- Report button in modal -->
+                                @auth
+                                    <span class="flex items-center text-gray-400 hover:text-red-600 cursor-pointer transition-colors"
+                                          onclick="event.stopPropagation(); openReportModal('post', {{ $post->id }})"
+                                          title="Report this post">
+                                        <i class="fas fa-flag mr-1"></i>
+                                    </span>
+                                @endauth
                             </div>
                         </div> --}}
                     </div>
@@ -219,4 +235,76 @@
             alert('Please log in to like posts');
         @endauth
     }
+
+    // Global variables for report modal
+    let currentReportType = '';
+    let currentReportId = '';
+
+    function openReportModal(type, id) {
+        currentReportType = type;
+        currentReportId = id;
+
+        // Update modal context
+        document.getElementById('reportTarget').textContent = type.charAt(0).toUpperCase() + type.slice(1);
+        document.getElementById('reportModal').classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeReportModal() {
+        document.getElementById('reportModal').classList.add('hidden');
+        document.body.style.overflow = 'auto';
+        currentReportType = '';
+        currentReportId = '';
+    }
+
+    function submitReport() {
+        const reason = document.getElementById('reportReason').value;
+
+        if (!currentReportType || !currentReportId) {
+            alert('Error: Missing report information');
+            return;
+        }
+
+        // Get CSRF token
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+        fetch('/report/content', {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': csrfToken,
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                type: currentReportType,
+                id: currentReportId,
+                reason: reason
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                closeReportModal();
+            } else {
+                alert('Error submitting report: ' + (data.message || 'Unknown error'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error submitting report. Please try again.');
+        });
+    }
+
+    // Close modal when clicking outside
+    document.addEventListener('DOMContentLoaded', function() {
+        const reportModal = document.getElementById('reportModal');
+        if (reportModal) {
+            reportModal.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeReportModal();
+                }
+            });
+        }
+    });
 </script>
