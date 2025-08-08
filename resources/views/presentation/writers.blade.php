@@ -4,7 +4,6 @@
     <main class="max-w-6xl mx-auto mt-8 px-4 sm:px-6 lg:px-8">
         <div class="mb-8">
             <h1 class="text-3xl font-bold text-gray-900 mb-2">All Writers</h1>
-            <p class="text-gray-600">Discover expert voices and researchers</p>
         </div>
 
         <!-- Writers Grid -->
@@ -41,18 +40,7 @@
                         </div>
                     </div>
 
-                    <div class="flex flex-wrap gap-1 mb-4">
-                        @foreach($writer['specialties'] as $specialty)
-                        <span class="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs">{{ $specialty }}</span>
-                        @endforeach
-                    </div>
 
-                    <div class="flex items-center justify-between text-xs text-gray-500">
-                        <span>Active {{ $writer['last_active'] }}</span>
-                        <span class="flex items-center">
-                            <i class="fas fa-star text-yellow-500 mr-1"></i> {{ $writer['rating'] }}
-                        </span>
-                    </div>
                 </div>
             </a>
             @endforeach

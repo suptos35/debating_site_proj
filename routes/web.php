@@ -27,12 +27,20 @@ Route::get('/user/{user}', function (User $user) {
 });
 
 Route::get('/catagory/{catagory}', function (Category $catagory) {
-    //posts by catagory where parent_id is null
-    $posts = $catagory->posts()->whereNull('parent_id')->with('catagory', 'user')->get();
+    //posts by catagory where parent_id is null (only main discussions)
+    $posts = $catagory->posts()->whereNull('parent_id')->with('categories', 'user')->get();
 
     $type = 'Catagory';
     $name = $catagory->name;
-    return view('filter_post', ['catagory' => $catagory, 'posts' => $posts, 'type' => $type, 'name' => $name]);
+    // Get discussions count (only parent posts)
+    $discussionsCount = $catagory->posts()->whereNull('parent_id')->count();
+    return view('filter_post', [
+        'catagory' => $catagory,
+        'posts' => $posts,
+        'type' => $type,
+        'name' => $name,
+        'discussionsCount' => $discussionsCount
+    ]);
 });
 
 Route::get('/index', function () {
@@ -112,8 +120,10 @@ if (app()->environment('local')) {
     })->name('presentation.argument');
 
     Route::get('/presentation/categories', function () {
-        // Get the original category objects with post counts
-        $categoryData = Category::withCount('posts')->get();
+        // Get categories and count only parent posts (with null parent_id)
+        $categoryData = Category::withCount(['posts' => function($query) {
+            $query->whereNull('parent_id');
+        }])->get();
 
         // Initialize view service to calculate views for each category
         $viewService = new \App\Services\ViewService();
@@ -129,7 +139,7 @@ if (app()->environment('local')) {
                 'icon' => 'fas fa-folder', // Default icon
                 'bg_color' => 'bg-gray-600', // Default background color
                 'description' => $category->description ?? 'No description available.',
-                'discussions_count' => $category->posts_count,
+                'discussions_count' => $category->posts_count, // Now only counts parent posts
                 'view_count' => $viewCount, // Add view count
                 'weekly_posts' => rand(1, 20), // Replace with actual logic if you track weekly posts
                 'top_writers' => [
@@ -227,90 +237,24 @@ if (app()->environment('local')) {
             abort(404);
         }
 
+        // Count only parent posts (with null parent_id)
+        $discussionsCount = $categoryModel->posts()->whereNull('parent_id')->count();
+
         // Get category view count
         $viewService = new \App\Services\ViewService();
         $categoryViewCount = $viewService->getCategoryViewCount($categoryModel);
 
-        // Get posts from this category
-        $dbPosts = $categoryModel->posts()
-            ->whereNull('parent_id')
-            ->with(['user', 'categories', 'references', 'children'])
-            ->get();
+        // We'll use the post_card component which handles all the formatting
+        // No need for complex formatting logic here anymore
 
-        // Format posts for display in the template
-        $posts = $dbPosts->map(function($post) {
-            // Determine icon and gradient based on category or use default
-            $icon = 'fas fa-comment';
-            $gradient = 'from-gray-400 to-gray-600';
-
-            // If post has categories, use the first one's properties
-            if ($post->categories->isNotEmpty()) {
-                $mainCategory = $post->categories->first();
-                // Use name instead of slug for category identification
-                $categoryName = strtolower($mainCategory->name);
-                if (strpos($categoryName, 'science') !== false) {
-                    $icon = 'fas fa-atom';
-                    $gradient = 'from-blue-400 to-blue-600';
-                } elseif (strpos($categoryName, 'tech') !== false) {
-                    $icon = 'fas fa-robot';
-                    $gradient = 'from-purple-400 to-purple-600';
-                } elseif (strpos($categoryName, 'environment') !== false || strpos($categoryName, 'nature') !== false) {
-                    $icon = 'fas fa-seedling';
-                    $gradient = 'from-green-400 to-green-600';
-                } elseif (strpos($categoryName, 'health') !== false || strpos($categoryName, 'medical') !== false) {
-                    $icon = 'fas fa-heartbeat';
-                    $gradient = 'from-red-400 to-red-600';
-                } elseif (strpos($categoryName, 'politic') !== false || strpos($categoryName, 'government') !== false) {
-                    $icon = 'fas fa-landmark';
-                    $gradient = 'from-yellow-400 to-yellow-600';
-                } elseif (strpos($categoryName, 'econom') !== false || strpos($categoryName, 'financ') !== false) {
-                    $icon = 'fas fa-chart-line';
-                    $gradient = 'from-indigo-400 to-indigo-600';
-                }
-            }
-
-            // Format categories for display
-            $formattedCategories = $post->categories->map(function($cat) {
-                $class = 'bg-gray-100 text-gray-600';
-
-                // Use name instead of slug for category identification
-                $categoryName = strtolower($cat->name);
-                if (strpos($categoryName, 'science') !== false) {
-                    $class = 'bg-blue-100 text-blue-600';
-                } elseif (strpos($categoryName, 'tech') !== false) {
-                    $class = 'bg-purple-100 text-purple-600';
-                } elseif (strpos($categoryName, 'environment') !== false || strpos($categoryName, 'nature') !== false) {
-                    $class = 'bg-green-100 text-green-600';
-                } elseif (strpos($categoryName, 'health') !== false || strpos($categoryName, 'medical') !== false) {
-                    $class = 'bg-red-100 text-red-600';
-                } elseif (strpos($categoryName, 'politic') !== false || strpos($categoryName, 'government') !== false) {
-                    $class = 'bg-yellow-100 text-yellow-600';
-                } elseif (strpos($categoryName, 'econom') !== false || strpos($categoryName, 'financ') !== false) {
-                    $class = 'bg-indigo-100 text-indigo-600';
-                }                return [
-                    'name' => $cat->name,
-                    'class' => $class
-                ];
-            })->toArray();
-
-            return [
-                'id' => $post->id,
-                'title' => $post->title,
-                'excerpt' => $post->excerpt ?? substr(strip_tags($post->content), 0, 150) . '...',
-                'author' => $post->user->name ?? 'Anonymous',
-                'likes' => $post->like_count ?? 0,
-                'comments' => $post->children->count() ?? 0,
-                'references' => $post->references->count() ?? 0,
-                'gradient' => $gradient,
-                'icon' => $icon,
-                'categories' => $formattedCategories
-            ];
-        })->toArray();
+        // Get all categories for the main_layout component
+        $allCategories = Category::all();
 
         return view('presentation.category', [
             'category' => $category,
             'category_model' => $categoryModel,
-            'posts' => $posts,
+            'categories' => $allCategories, // Pass all categories for the main_layout component
+            'discussionsCount' => $discussionsCount,
             'viewCount' => $categoryViewCount
         ]);
     })->name('presentation.category');
@@ -453,7 +397,14 @@ if (app()->environment('local')) {
             ];
         })->toArray();
 
-        return view('presentation.writer', compact('writer', 'posts'));
+        // Get all categories for the main layout component
+        $categories = Category::all();
+
+        return view('presentation.writer', [
+            'writer' => $writer,
+            'user' => $user,
+            'categories' => $categories
+        ]);
     })->name('presentation.writer');
 
     Route::get('/presentation/profile', function () {

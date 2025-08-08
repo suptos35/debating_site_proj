@@ -83,4 +83,20 @@ public function viewCount()
     return $this->views()->sum('view_count');
 }
 
+/**
+ * Get the total comment count (including all sub-comments) for this post.
+ */
+public function totalCommentCount()
+{
+    // First, get immediate children count
+    $count = $this->children()->count();
+
+    // Then, recursively count all descendants
+    foreach ($this->children as $child) {
+        $count += $child->totalCommentCount();
+    }
+
+    return $count;
+}
+
 }

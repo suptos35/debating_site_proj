@@ -47,7 +47,7 @@
                             Join the Discussion
                         </a>
                     @endauth
-                    <a href="/categories" class="border-2 border-white text-white px-6 py-3 rounded-lg font-semibold hover:bg-white hover:text-blue-600 transition-all">
+                    <a href="/presentation/categories" class="border-2 border-white text-white px-6 py-3 rounded-lg font-semibold hover:bg-white hover:text-blue-600 transition-all">
                         Browse Topics
                     </a>
                 </div>

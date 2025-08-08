@@ -18,11 +18,21 @@
                         </div>
                         <div>
                             <h3 class="text-lg font-semibold text-gray-900">{{ $category['name'] }}</h3>
-                            <p class="text-sm text-gray-500">{{ $category['discussions_count'] }} discussions</p>
+                            <p class="text-sm text-gray-500">{{ $category['discussions_count'] }} main discussions • {{ number_format($category['view_count']) }} views</p>
                         </div>
                     </div>
                     <p class="text-gray-600 text-sm mb-4">{{ $category['description'] }}</p>
                     <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-2">
+                            <span class="px-2 py-1 bg-blue-50 text-blue-600 rounded-full text-xs font-medium flex items-center" title="Main discussions (excluding arguments)">
+                                <i class="fas fa-comment-alt mr-1 text-xs"></i> {{ $category['discussions_count'] }}
+                            </span>
+                            <span class="px-2 py-1 bg-gray-50 text-gray-600 rounded-full text-xs font-medium flex items-center">
+                                <i class="fas fa-eye mr-1 text-xs"></i> {{ number_format($category['view_count']) }}
+                            </span>
+                        </div>
+                    </div>
+                    {{-- <div class="flex items-center justify-between">
                         <span class="text-xs text-gray-500">{{ $category['weekly_posts'] }} new this week</span>
                         <div class="flex items-center space-x-1">
                             @foreach($category['top_writers'] as $writer)
@@ -31,7 +41,7 @@
                             </div>
                             @endforeach
                         </div>
-                    </div>
+                    </div> --}}
                 </div>
             </a>
             @endforeach

@@ -34,28 +34,17 @@
                     <span class="flex items-center">
                         <i class="fas fa-user mr-1"></i> {{$post->user->name}}
                     </span>
-                    <span class="flex items-center text-green-600 like-button cursor-pointer" 
-                          data-post-id="{{ $post->id }}" 
+                    <span class="flex items-center text-green-600 like-button cursor-pointer"
+                          data-post-id="{{ $post->id }}"
                           onclick="event.stopPropagation(); toggleLike(this, {{ $post->id }})">
-                        <i class="fas fa-thumbs-up mr-1 {{ Auth::check() && $post->isLikedByUser(Auth::id()) ? 'text-green-600' : 'text-gray-400' }}"></i> 
+                        <i class="fas fa-thumbs-up mr-1 {{ Auth::check() && $post->isLikedByUser(Auth::id()) ? 'text-green-600' : 'text-gray-400' }}"></i>
                         <span class="like-count">{{ $post->like_count ?? 0 }}</span>
                     </span>
                 </div>
                 <div class="flex items-center space-x-3">
                     <span class="flex items-center text-blue-600">
-                        <i class="fas fa-comments mr-1"></i> 
-                        @php
-                            // Function to count all children recursively
-                            function countAllChildren($post) {
-                                $count = $post->children()->count();
-                                foreach ($post->children as $child) {
-                                    $count += countAllChildren($child);
-                                }
-                                return $count;
-                            }
-                            $commentCount = countAllChildren($post);
-                            echo $commentCount;
-                        @endphp
+                        <i class="fas fa-comments mr-1"></i>
+                        {{ $post->totalCommentCount() }}
                     </span>
                     <!-- Edit/Delete buttons for post owner -->
                     @auth
@@ -162,17 +151,17 @@
                         </div>
 
                         <!-- Action Buttons -->
-                        <div class="flex items-center space-x-4">
+                        {{-- <div class="flex items-center space-x-4">
                             <div class="flex items-center space-x-4 text-sm text-gray-500">
                                 <span class="flex items-center cursor-pointer" onclick="event.stopPropagation(); toggleLike(this, {{ $post->id }})">
                                     <i class="fas fa-thumbs-up mr-1 {{ Auth::check() && $post->isLikedByUser(Auth::id()) ? 'text-green-600' : 'text-gray-400' }}"></i>
                                     <span class="like-count">{{ $post->like_count ?? 0 }}</span>
                                 </span>
                                 <span class="flex items-center">
-                                    <i class="fas fa-comments mr-1 text-blue-600"></i> {{ $commentCount }}
+                                    <i class="fas fa-comments mr-1 text-blue-600"></i> {{ $post->totalCommentCount() }}
                                 </span>
                             </div>
-                        </div>
+                        </div> --}}
                     </div>
 
                     <!-- Read More Button -->
@@ -210,7 +199,7 @@
                     likeCountElements.forEach(el => {
                         el.textContent = data.likeCount;
                     });
-                    
+
                     // Update all like button icons for this post
                     const likeIcons = document.querySelectorAll(`.like-button[data-post-id="${postId}"] i, .modal-like-icon-${postId}`);
                     likeIcons.forEach(icon => {
