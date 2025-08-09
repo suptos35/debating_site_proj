@@ -39,11 +39,11 @@
                 </div>
 
                 <!-- Action Buttons -->
-                <div class="flex flex-col space-y-2">
+                {{-- <div class="flex flex-col space-y-2">
                     <button onclick="openEditProfileModal()" class="bg-blue-600 text-white px-6 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
                         <i class="fas fa-edit mr-2"></i> Edit Profile
                     </button>
-                </div>
+                </div> --}}
             </div>
 
             <!-- Bio -->

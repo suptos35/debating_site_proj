@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Post;
 use App\Models\Reference;
+use App\Services\FreeAIReferenceService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
@@ -181,8 +182,28 @@ public function store(Request $request, Post $post)
         'similarity_score' => $reference->similarity_score
     ]);
 
-    return back()->with('success', 'Reference added!');
+    // 🚀 AUTOMATIC AI ANALYSIS - Non-blocking (runs after response sent)
+    dispatch(function() use ($reference, $post) {
+        try {
+            $aiService = new FreeAIReferenceService();
+            $aiResult = $aiService->validateReference($reference, $post);
+
+            Log::info('Auto AI analysis completed for new reference', [
+                'reference_id' => $reference->id,
+                'supports_post' => $aiResult['supports_post'] ?? null,
+                'confidence' => $aiResult['confidence'] ?? 0
+            ]);
+        } catch (\Exception $e) {
+            Log::warning('Auto AI analysis failed for new reference', [
+                'reference_id' => $reference->id,
+                'error' => $e->getMessage()
+            ]);
+        }
+    })->afterResponse(); // Runs after page loads - user doesn't wait!
+
+    return back()->with('success', 'Reference added! AI analysis will complete in 5-10 seconds - the page will auto-refresh to show results.');
 }
+
     public function destroy(Reference $reference)
 {
     if (Auth::id() !== $reference->post->user_id) {
@@ -203,5 +224,35 @@ public function store(Request $request, Post $post)
 
     return back()->with('success', 'Reference deleted!');
 }
+
+    /**
+     * Trigger AI analysis for a specific reference
+     */
+    public function checkWithAI(Reference $reference)
+    {
+        if (Auth::id() !== $reference->post->user_id) {
+            abort(403);
+        }
+
+        try {
+            $aiService = new FreeAIReferenceService();
+            $result = $aiService->validateReference($reference, $reference->post);
+
+            // Handle different result types
+            if ($result['supports_post'] === null) {
+                // Gibberish or invalid content detected
+                $message = "❌ " . ($result['explanation'] ?? 'Analysis rejected - content appears to be invalid');
+            } else {
+                $message = $result['supports_post']
+                    ? "✅ Reference supports the post content (Confidence: " . round($result['confidence'] * 100, 1) . "%)"
+                    : "❌ Reference contradicts the post content (Confidence: " . round($result['confidence'] * 100, 1) . "%)";
+            }
+
+            return back()->with('success', $message);
+
+        } catch (\Exception $e) {
+            return back()->with('error', 'AI analysis failed: ' . $e->getMessage());
+        }
+    }
 
 }

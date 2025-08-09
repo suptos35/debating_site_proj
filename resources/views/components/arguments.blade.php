@@ -109,11 +109,31 @@
                                             @elseif($reference->similarity_score !== null)
                                                 <span title="Low relevance ({{ number_format($reference->similarity_score * 100, 1) }}% match)" class="text-gray-500 text-xs">🔗 Low relevance</span>
                                             @endif
+
+                                            <!-- AI Analysis Badge -->
+                                            @if($reference->supports_post !== null)
+                                                @if($reference->supports_post)
+                                                    <span title="AI Analysis: Supports claim ({{ round($reference->confidence_score * 100, 1) }}% confidence)" class="text-green-600 text-xs bg-green-50 px-2 py-1 rounded">🤖 Supports</span>
+                                                @else
+                                                    <span title="AI Analysis: Contradicts claim ({{ round($reference->confidence_score * 100, 1) }}% confidence)" class="text-red-600 text-xs bg-red-50 px-2 py-1 rounded">🤖 Contradicts</span>
+                                                @endif
+                                            @elseif($reference->last_checked_at !== null)
+                                                <span title="AI Analysis: {{ $reference->ai_analysis ?? 'Content rejected for analysis' }}" class="text-orange-600 text-xs bg-orange-50 px-2 py-1 rounded">🤖 Rejected</span>
+                                            @else
+                                                <span title="AI analysis pending" class="text-gray-500 text-xs bg-gray-50 px-2 py-1 rounded">🤖 Pending</span>
+                                            @endif
                                         </div>
                                     </div>
                                     <div class="flex items-center space-x-2">
                                         @auth
                                             @if(Auth::id() === $pro->user_id)
+                                                <!-- AI Check button -->
+                                                <form action="{{ route('references.check-ai', $reference) }}" method="POST" class="inline">
+                                                    @csrf
+                                                    <button type="submit" class="text-blue-600 text-xs hover:underline" title="Check with AI">
+                                                        🤖 Check
+                                                    </button>
+                                                </form>
                                                 <!-- Delete button -->
                                                 <form action="{{ route('references.delete', $reference) }}" method="POST" onsubmit="return confirm('Delete this reference?');">
                                                     @csrf
@@ -139,19 +159,17 @@
                                         @csrf
                                         <input type="url" name="url" class="w-full mb-2 p-2 border rounded" placeholder="Reference URL" required>
                                         <input type="text" name="description" class="w-full mb-2 p-2 border rounded" placeholder="Description (optional)">
-                                        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded text-sm">Add Reference</button>
-                                    </form>
-                                @endif
-                            @endauth
-                        </div>
-                    </div>
-                </div>
+                        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded text-sm">Add Reference + AI Check</button>
+                    </form>
+                @endif
+            @endauth
+        </div>
+    </div>
+</div>
             </div>
         </article>
         @endforeach
-    </div>
-
-    <!-- Cons Section -->
+    </div>    <!-- Cons Section -->
     <div class="space-y-6">
         <div class="flex items-center justify-between mb-2">
             <h2 class="text-red-600 text-xl font-bold">Cons</h2>
@@ -242,11 +260,31 @@
                                             @elseif($reference->similarity_score !== null)
                                                 <span title="Low relevance ({{ number_format($reference->similarity_score * 100, 1) }}% match)" class="text-gray-500 text-xs">🔗 Low relevance</span>
                                             @endif
+
+                                            <!-- AI Analysis Badge -->
+                                            @if($reference->supports_post !== null)
+                                                @if($reference->supports_post)
+                                                    <span title="AI Analysis: Supports claim ({{ round($reference->confidence_score * 100, 1) }}% confidence)" class="text-green-600 text-xs bg-green-50 px-2 py-1 rounded">🤖 Supports</span>
+                                                @else
+                                                    <span title="AI Analysis: Contradicts claim ({{ round($reference->confidence_score * 100, 1) }}% confidence)" class="text-red-600 text-xs bg-red-50 px-2 py-1 rounded">🤖 Contradicts</span>
+                                                @endif
+                                            @elseif($reference->last_checked_at !== null)
+                                                <span title="AI Analysis: {{ $reference->ai_analysis ?? 'Content rejected for analysis' }}" class="text-orange-600 text-xs bg-orange-50 px-2 py-1 rounded">🤖 Rejected</span>
+                                            @else
+                                                <span title="AI analysis pending" class="text-gray-500 text-xs bg-gray-50 px-2 py-1 rounded">🤖 Pending</span>
+                                            @endif
                                         </div>
                                     </div>
                                     <div class="flex items-center space-x-2">
                                         @auth
                                             @if(Auth::id() === $con->user_id)
+                                                <!-- AI Check button -->
+                                                <form action="{{ route('references.check-ai', $reference) }}" method="POST" class="inline">
+                                                    @csrf
+                                                    <button type="submit" class="text-blue-600 text-xs hover:underline" title="Check with AI">
+                                                        🤖 Check
+                                                    </button>
+                                                </form>
                                                 <!-- Delete button -->
                                                 <form action="{{ route('references.delete', $reference) }}" method="POST" onsubmit="return confirm('Delete this reference?');">
                                                     @csrf
@@ -272,7 +310,7 @@
                                         @csrf
                                         <input type="url" name="url" class="w-full mb-2 p-2 border rounded" placeholder="Reference URL" required>
                                         <input type="text" name="description" class="w-full mb-2 p-2 border rounded" placeholder="Description (optional)">
-                                        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded text-sm">Add Reference</button>
+                                        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded text-sm">Add Reference + AI Check</button>
                                     </form>
                                 @endif
                             @endauth
@@ -503,5 +541,15 @@
                 @endauth
             });
         });
+
+        // Auto-refresh for pending AI analyses
+        const hasPendingAI = document.querySelector('[title*="AI analysis pending"]');
+        if (hasPendingAI) {
+            console.log('🤖 Pending AI analysis detected, will refresh page in 10 seconds...');
+            setTimeout(() => {
+                console.log('🔄 Refreshing page to show AI results...');
+                window.location.reload();
+            }, 10000); // Refresh after 10 seconds
+        }
     });
 </script>

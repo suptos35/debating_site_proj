@@ -60,10 +60,19 @@
             <div class="lg:col-span-2">
                 <div class="mb-8">
                     <h2 class="text-2xl font-bold text-gray-900 mb-6">Latest Discussions</h2>
-                    <div class="grid md:grid-cols-2 gap-6">
+                    <div class="grid md:grid-cols-2 gap-6 mb-6">
                         @foreach ($posts->take(4) as $post)
                             <x-post_card :post="$post"></x-post_card>
                         @endforeach
+                    </div>
+
+                    <!-- Load More Button -->
+                    <div class="text-center">
+                        <a href="{{ route('presentation.discussions') }}"
+                           class="inline-flex items-center px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm hover:shadow-md">
+                            <i class="fas fa-plus-circle mr-2"></i>
+                            Load More Discussions
+                        </a>
                     </div>
                 </div>
             </div>

@@ -96,6 +96,7 @@ Route::post('/posts/{post}/like', [LikeController::class, 'toggle'])->name('post
 
 Route::post('/posts/{post}/references', [ReferenceController::class, 'store'])->middleware('auth')->name('references.store');
 Route::delete('/references/{reference}', [ReferenceController::class, 'destroy'])->middleware('auth')->name('references.delete');
+Route::post('/references/{reference}/check-ai', [ReferenceController::class, 'checkWithAI'])->middleware('auth')->name('references.check-ai');
 
 // Poll routes
 Route::get('/polls', [PollController::class, 'index'])->name('polls.index');
